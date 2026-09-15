@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TransitMate — Offline Edition (SIH 2026)</title>
+  
+  <!-- Embedded React & ReactDOM via standalone UMD or inline runtime -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: #111015;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      color: #B4B0A7;
+    }
+
+    .tm-root {
+      --tm-bg: #17161B;
+      --tm-card: #1E1D23;
+      --tm-card-alt: #26242C;
+      --tm-border: rgba(255,255,255,0.08);
+      --tm-heading: #F3EFE6;
+      --tm-body: #B4B0A7;
+      --tm-muted: #7C7970;
+
+      --tm-accent: #C9A461;
+      --tm-accent-soft: #C9A46126;
+      --tm-accent-border: #C9A46145;
+      --tm-accent-2: #E3C77E;
+
+      --tm-teal: #45AD89;
+      --tm-teal-soft: #45AD8926;
+      --tm-teal-border: #45AD8945;
+
+      --tm-amber: #D98B3F;
+      --tm-amber-soft: #D98B3F26;
+      --tm-amber-border: #D98B3F45;
+
+      --tm-danger: #D9584A;
+      --tm-danger-soft: #D9584A26;
+
+      --tm-on-accent: #17161B;
+      --tm-toast-bg: #0E0D11;
+      --tm-toast-fg: #F3EFE6;
+
+      background: var(--tm-bg);
+      color: var(--tm-body);
+      width: 100%;
+      max-width: 420px;
+      min-height: 780px;
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 28px 70px -24px rgba(0,0,0,0.85), 0 2px 12px rgba(0,0,0,0.5);
+      border: 1px solid var(--tm-border);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tm-root.tm-light {
+      --tm-bg: #F5F4F1;
+      --tm-card: #FFFFFF;
+      --tm-card-alt: #F1F0EB;
+      --tm-border: #E6E4DD;
+      --tm-heading: #1B1A17;
+      --tm-body: #5B5850;
+      --tm-muted: #948F82;
+
+      --tm-accent: #A6791F;
+      --tm-accent-soft: #A6791F14;
+      --tm-accent-border: #A6791F33;
+      --tm-accent-2: #C99A3E;
+
+      --tm-teal: #1E8F6F;
+      --tm-teal-soft: #1E8F6F14;
+      --tm-teal-border: #1E8F6F33;
+
+      --tm-amber: #B8791F;
+      --tm-amber-soft: #B8791F14;
+      --tm-amber-border: #B8791F33;
+
+      --tm-danger: #B7402E;
+      --tm-danger-soft: #B7402E14;
+
+      --tm-on-accent: #FFFFFF;
+      --tm-toast-bg: #1B1A17;
+      --tm-toast-fg: #FFFFFF;
+    }
+
+    .tm-display { font-family: 'Inter', sans-serif; font-weight: 700; letter-spacing: -0.01em; color: var(--tm-heading); }
+    .tm-mono { font-family: 'IBM Plex Mono', monospace; font-feature-settings: 'tnum' 1; }
+
+    .tm-card { background: var(--tm-card); border: 1px solid var(--tm-border); }
+    .tm-card-alt { background: var(--tm-card-alt); border: 1px solid var(--tm-border); }
+    .tm-eyebrow { background: var(--tm-card-alt); color: var(--tm-body); letter-spacing: 0.06em; }
+
+    .tm-hover { transition: background-color 0.15s ease, border-color 0.15s ease; cursor: pointer; }
+    .tm-hover:hover { background: var(--tm-card-alt); border-color: var(--tm-border); }
+
+    .tm-dot {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 9999px;
+      background: var(--tm-accent-2);
+      box-shadow: 0 0 10px 2px rgba(201,164,97,0.55);
+      animation: tm-travel 7s ease-in-out infinite;
+      opacity: 0.9;
+    }
+    @keyframes tm-travel {
+      0%   { transform: translate(4px, 30px); opacity: 0; }
+      8%   { opacity: 0.9; }
+      50%  { transform: translate(190px, 8px); }
+      92%  { opacity: 0.9; }
+      100% { transform: translate(372px, 30px); opacity: 0; }
+    }
+
+    .tm-fade-in { animation: tm-fade-in 0.4s ease-out both; }
+    @keyframes tm-fade-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .tm-toast {
+      animation: tm-toast-in 0.25s ease-out both;
+      position: absolute;
+      bottom: 84px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 18px;
+      border-radius: 9999px;
+      font-size: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      text-align: center;
+      max-width: 88%;
+      z-index: 100;
+      background: var(--tm-toast-bg);
+      color: var(--tm-toast-fg);
+      border: 1px solid var(--tm-border);
+    }
+    @keyframes tm-toast-in {
+      from { opacity: 0; transform: translate(-50%, 8px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+
+    .tm-input::placeholder { color: var(--tm-muted); }
+    .tm-nav-active { color: var(--tm-heading); }
+    .tm-nav-inactive { color: var(--tm-muted); }
+
+    /* Clean Flex utility classes */
+    .flex { display: flex; }
+    .flex-col { flex-direction: column; }
+    .flex-1 { flex: 1 1 0%; }
+    .items-center { align-items: center; }
+    .items-start { align-items: flex-start; }
+    .justify-between { justify-content: space-between; }
+    .justify-center { justify-content: center; }
+    .gap-1 { gap: 4px; }
+    .gap-1-5 { gap: 6px; }
+    .gap-2 { gap: 8px; }
+    .gap-2-5 { gap: 10px; }
+    .gap-3 { gap: 12px; }
+    .gap-4 { gap: 16px; }
+    .gap-5 { gap: 20px; }
+    .gap-6 { gap: 24px; }
+    .grid { display: grid; }
+    .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .rounded-full { border-radius: 9999px; }
+    .rounded-xl { border-radius: 12px; }
+    .rounded-2xl { border-radius: 16px; }
+    .rounded-3xl { border-radius: 24px; }
+    .p-1 { padding: 4px; }
+    .p-2 { padding: 8px; }
+    .p-2-5 { padding: 10px; }
+    .p-3 { padding: 12px; }
+    .p-3-5 { padding: 14px; }
+    .p-4 { padding: 16px; }
+    .p-6 { padding: 24px; }
+    .px-4 { padding-left: 16px; padding-right: 16px; }
+    .px-5 { padding-left: 20px; padding-right: 20px; }
+    .px-6 { padding-left: 24px; padding-right: 24px; }
+    .py-1 { padding-top: 4px; padding-bottom: 4px; }
+    .py-2 { padding-top: 8px; padding-bottom: 8px; }
+    .py-2-5 { padding-top: 10px; padding-bottom: 10px; }
+    .py-3 { padding-top: 12px; padding-bottom: 12px; }
+    .pt-4 { padding-top: 16px; }
+    .pt-6 { padding-top: 24px; }
+    .pt-7 { padding-top: 28px; }
+    .pt-10 { padding-top: 40px; }
+    .pb-3 { padding-bottom: 12px; }
+    .pb-4 { padding-bottom: 16px; }
+    .pb-6 { padding-bottom: 24px; }
+    .pb-8 { padding-bottom: 32px; }
+    .text-center { text-align: center; }
+    .text-left { text-align: left; }
+    .text-right { text-align: right; }
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .w-full { width: 100%; }
+    .relative { position: relative; }
+    .absolute { position: absolute; }
+    .overflow-y-auto { overflow-y: auto; }
+    .overflow-x-auto { overflow-x: auto; }
+    .shrink-0 { flex-shrink: 0; }
+    .min-w-0 { min-width: 0; }
+    button { background: none; border: none; cursor: pointer; font-family: inherit; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- Embedded SVG Icons (100% Offline Compatible) ---
+    const Icon = ({ name, size = 16, color = "currentColor", className = "" }) => {
+      const icons = {
+        home: <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>,
+        compass: <circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>,
+        train: <rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/><path d="M12 3v8"/><path d="m8 19-2 3"/><path d="m18 22-2-3"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/>,
+        bell: <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>,
+        users: <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>,
+        sparkles: <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/>,
+        pin: <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>,
+        search: <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>,
+        briefcase: <rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>,
+        building: <rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M8 10h.01"/><path d="M16 10h.01"/><path d="M8 14h.01"/><path d="M16 14h.01"/>,
+        bus: <path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4C2.9 6 1.9 6.8 1.6 7.8l-1.4 5c-.1.4-.2.8-.2 1.2 0 .4.1.8.2 1.2.3 1.1.8 2.8.8 2.8h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/>,
+        zap: <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>,
+        wallet: <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>,
+        wind: <path d="M17.7 7.7A2.5 2.5 0 1 1 20 10H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/><path d="M15.7 13.7A2 2 0 1 1 17 11H2"/>,
+        arrowLeft: <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>,
+        arrowRight: <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>,
+        clock: <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>,
+        rupee: <path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/>,
+        check: <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>,
+        circle: <circle cx="12" cy="12" r="10"/>,
+        nav: <polygon points="3 11 22 2 13 21 11 13 3 11"/>,
+        alert: <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>,
+        message: <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>,
+        chevronRight: <path d="m9 18 6-6-6-6"/>,
+        armchair: <path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/><path d="M3 16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v2H7v-2a2 2 0 0 0-4 0Z"/><path d="M5 18v2"/><path d="M19 18v2"/>,
+        thumbsUp: <path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h3"/><path d="M7 14h.01"/>,
+        plus: <path d="M5 12h14"/><path d="M12 5v14"/>,
+        pencil: <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>,
+        send: <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>,
+        trash: <path d="3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>,
+        mail: <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>,
+        lock: <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>,
+        user: <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>,
+        settings: <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>,
+        logout: <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>,
+        sun: <circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>,
+        moon: <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>,
+        shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>,
+        refresh: <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/>,
+      };
+
+      return (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={color}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={className}
+        >
+          {icons[name] || <circle cx="12" cy="12" r="10" />}
+        </svg>
+      );
+    };
+
+    // --- Embedded Real-Time Transit Data & Simulation ---
+    const QUICK_DESTINATIONS = [
+      { key: "home", label: "Home", icon: "home", sub: "Salt Lake, Sector V", eta: "22 min", route: "Route 12" },
+      { key: "office", label: "Office", icon: "briefcase", sub: "Park Street", eta: "18 min", route: "Metro · Blue" },
+      { key: "esplanade", label: "Esplanade", icon: "building", sub: "Metro Station", eta: "14 min", route: "Route 47" },
+    ];
+
+    const ROUTE_SETS = {
+      home: {
+        title: "Salt Lake, Sector V",
+        options: [
+          { key: "fastest", tag: "Fastest", mode: "Bus · Route 12", time: "22 min", fare: "₹18", crowd: "High", detail: "Direct route, 3 stops. Next bus in 4 min.", vehicleType: "bus", stops: ["Sector V Bus Stand", "Karunamoyee", "Tank No. 4", "Nicco Park Gate"], approach: { stopsAway: 2, currentlyAt: "Approaching Karunamoyee", etaToBoardMin: 4 } },
+          { key: "cheapest", tag: "Cheapest", mode: "Bus · Route 9A", time: "31 min", fare: "₹12", crowd: "Medium", detail: "One change at Karunamoyee. Next bus in 9 min.", vehicleType: "bus", stops: ["Sector V", "Karunamoyee (change)", "Baguiati", "Salt Lake Stadium"], approach: { stopsAway: 3, currentlyAt: "Leaving Baguiati", etaToBoardMin: 9 } },
+          { key: "calm", tag: "Least crowded", mode: "Metro · Blue + Route 3", time: "27 min", fare: "₹22", crowd: "Low", detail: "Metro leg is roomy this hour, short walk after.", vehicleType: "metro", stops: ["Sector V Metro", "Salt Lake Stadium", "City Centre", "Walk to home"], approach: { stopsAway: 0, currentlyAt: "At Sector V platform", etaToBoardMin: 2 } },
+        ],
+      },
+      office: {
+        title: "Park Street",
+        options: [
+          { key: "fastest", tag: "Fastest", mode: "Metro · Blue", time: "18 min", fare: "₹15", crowd: "Medium", detail: "Direct metro, 5 stops. Next train in 3 min.", vehicleType: "metro", stops: ["Sector V", "City Centre", "Bidhannagar", "Phoolbagan", "Park Street"], approach: { stopsAway: 1, currentlyAt: "Approaching Sector V", etaToBoardMin: 3 } },
+          { key: "cheapest", tag: "Cheapest", mode: "Bus · Route 21", time: "29 min", fare: "₹10", crowd: "Medium", detail: "Direct route, no change needed.", vehicleType: "bus", stops: ["Sector V", "Ultadanga", "Park Circus", "Park Street"], approach: { stopsAway: 2, currentlyAt: "Approaching Sector V", etaToBoardMin: 6 } },
+          { key: "calm", tag: "Least crowded", mode: "Metro · Blue (off-peak car)", time: "19 min", fare: "₹15", crowd: "Low", detail: "Board the last car — noticeably quieter.", vehicleType: "metro", stops: ["Sector V", "City Centre", "Bidhannagar", "Phoolbagan", "Park Street"], approach: { stopsAway: 1, currentlyAt: "Approaching Sector V", etaToBoardMin: 3 } },
+        ],
+      },
+      esplanade: {
+        title: "Esplanade Metro Station",
+        options: [
+          { key: "fastest", tag: "Fastest", mode: "Bus · Route 47", time: "14 min", fare: "₹10", crowd: "Medium", detail: "Direct route, 2 stops. Next bus in 6 min.", vehicleType: "bus", stops: ["Sector V", "Karunamoyee", "Esplanade"], approach: { stopsAway: 1, currentlyAt: "Leaving Karunamoyee", etaToBoardMin: 6 } },
+          { key: "cheapest", tag: "Cheapest", mode: "Bus · Route 47", time: "14 min", fare: "₹10", crowd: "Medium", detail: "Same as fastest — this trip is already cheapest.", vehicleType: "bus", stops: ["Sector V", "Karunamoyee", "Esplanade"], approach: { stopsAway: 1, currentlyAt: "Leaving Karunamoyee", etaToBoardMin: 6 } },
+          { key: "calm", tag: "Least crowded", mode: "Metro · Blue", time: "20 min", fare: "₹15", crowd: "Low", detail: "Longer, but seats are usually free this hour.", vehicleType: "metro", stops: ["Sector V Metro", "City Centre", "Esplanade Metro"], approach: { stopsAway: 0, currentlyAt: "At Sector V platform", etaToBoardMin: 3 } },
+        ],
+      },
+      default: {
+        title: "Your destination",
+        options: [
+          { key: "fastest", tag: "Fastest", mode: "Bus · Route 15", time: "24 min", fare: "₹16", crowd: "Medium", detail: "Direct route, 4 stops. Next bus in 5 min.", vehicleType: "bus", stops: ["Sector V", "Karunamoyee", "Baguiati", "City Centre", "Your stop"], approach: { stopsAway: 2, currentlyAt: "Approaching Karunamoyee", etaToBoardMin: 5 } },
+          { key: "cheapest", tag: "Cheapest", mode: "Bus · Route 8", time: "33 min", fare: "₹11", crowd: "Medium", detail: "One change midway. Next bus in 7 min.", vehicleType: "bus", stops: ["Sector V", "Ultadanga (change)", "Park Circus", "Your stop"], approach: { stopsAway: 2, currentlyAt: "Approaching Ultadanga", etaToBoardMin: 7 } },
+          { key: "calm", tag: "Least crowded", mode: "Metro · Blue", time: "26 min", fare: "₹20", crowd: "Low", detail: "A little longer, but comfortably seated.", vehicleType: "metro", stops: ["Sector V", "City Centre", "Bidhannagar", "Your stop"], approach: { stopsAway: 1, currentlyAt: "Approaching Sector V", etaToBoardMin: 4 } },
+        ],
+      }
+    };
+
+    const CROWD_STYLE = {
+      Low: { color: "var(--tm-teal)", bg: "var(--tm-teal-soft)" },
+      Medium: { color: "var(--tm-amber)", bg: "var(--tm-amber-soft)" },
+      High: { color: "var(--tm-danger)", bg: "var(--tm-danger-soft)" },
+    };
+
+    // --- Main App Component ---
+    function TransitMateOfflineApp() {
+      const [authed, setAuthed] = useState(true);
+      const [userName, setUserName] = useState("Rhea Sen");
+      const [screen, setScreen] = useState("home");
+      const [destination, setDestination] = useState("");
+      const [tripKey, setTripKey] = useState("home");
+      const [trackingOption, setTrackingOption] = useState(null);
+      const [theme, setTheme] = useState("dark");
+      const [toast, setToast] = useState(null);
+
+      const [posts, setPosts] = useState([
+        { id: "c1", userName: "Amit K.", type: "platform", routeLabel: "Metro · Blue", message: "Platform 2 closed for maintenance at Sector V — board from Platform 1 instead.", time: "35 min ago", confirms: 14 },
+        { id: "c2", userName: "Debjit M.", type: "crowd", routeLabel: "Route 12", message: "Packed beyond normal today — standing room only near Karunamoyee.", time: "10 min ago", confirms: 6 },
+        { id: "c3", userName: "Pooja B.", type: "delay", routeLabel: "Route 47", message: "Stuck in traffic near the Karunamoyee crossing, moving slowly.", time: "18 min ago", confirms: 9 },
+      ]);
+
+      const [alerts, setAlerts] = useState([
+        { id: "a1", title: "Beat tonight's rush", message: "Head out in the next 8 min to skip the 7:00 PM crowd surge on Route 12.", time: "Just now", routeLabel: "Route 12" },
+        { id: "a2", title: "Route 12 running late", message: "Traffic near Karunamoyee is pushing arrivals back by about 8 minutes.", time: "2 min ago", routeLabel: "Route 12" },
+        { id: "a3", title: "Metro Blue Line disruption", message: "Signal maintenance near Phoolbagan. Delays of 10+ minutes.", time: "12 min ago", routeLabel: "Metro · Blue" },
+      ]);
+
+      const fireToast = (msg) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 2400);
+      };
+
+      const goToRoutes = (key, label) => {
+        setTripKey(key);
+        setDestination(label);
+        setScreen("routes");
+      };
+
+      const handlePickRoute = (opt) => {
+        setTrackingOption(opt);
+        setScreen("track");
+      };
+
+      return (
+        <div className={`tm-root ${theme === "light" ? "tm-light" : ""}`}>
+          {/* Header Bar */}
+          <div
+            onClick={() => setScreen("admin")}
+            className="px-5 py-2.5 flex items-center justify-between text-[11px] font-medium tm-hover"
+            style={{ background: "rgba(0,0,0,0.3)", borderBottom: "1px solid var(--tm-border)" }}
+            title="Click to open Admin Console"
+          >
+            <span className="flex items-center gap-1.5" style={{ color: "var(--tm-accent)" }}>
+              <Icon name="shield" size={13} /> SIH 2026 TransitMate
+            </span>
+            <span
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full font-mono text-[9px]"
+              style={{ background: "var(--tm-teal-soft)", color: "var(--tm-teal)", border: "1px solid var(--tm-teal-border)" }}
+            >
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--tm-teal)', display: 'inline-block' }}></span>
+              OFFLINE READY
+            </span>
+          </div>
+
+          {/* Screen Content */}
+          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+            {screen === "home" && (
+              <div className="p-6 flex flex-col gap-6 tm-fade-in">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="tm-mono text-xs" style={{ color: "var(--tm-muted)" }}>TUE · 6:42 PM</p>
+                    <h1 className="tm-display text-2xl font-semibold mt-1">Evening, {userName}</h1>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--tm-muted)" }}>Salt Lake, Sector V</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => setScreen("admin")} className="tm-card-alt p-2 rounded-full" title="Admin Console">
+                      <Icon name="shield" size={16} color="var(--tm-accent)" />
+                    </button>
+                    <button onClick={() => setScreen("habits")} className="tm-card-alt p-2 rounded-full tm-mono text-xs font-bold" style={{ color: 'var(--tm-accent)' }}>
+                      R
+                    </button>
+                  </div>
+                </div>
+
+                {/* Search box */}
+                <div className="tm-card-alt p-3.5 rounded-2xl flex items-center gap-3">
+                  <Icon name="pin" size={16} color="var(--tm-accent)" />
+                  <input
+                    value={destination}
+                    onChange={(e) => setDestination(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && goToRoutes("home", destination || "Home")}
+                    placeholder="Where are you headed?"
+                    className="tm-input flex-1 bg-transparent outline-none text-sm"
+                    style={{ color: "var(--tm-heading)" }}
+                  />
+                  <button onClick={() => goToRoutes("home", destination || "Home")} className="p-2 rounded-full" style={{ background: "var(--tm-accent)" }}>
+                    <Icon name="search" size={13} color="var(--tm-on-accent)" />
+                  </button>
+                </div>
+
+                {/* AI Rush Hour Advisory */}
+                <div className="p-4 rounded-2xl flex gap-3 items-start" style={{ background: "var(--tm-amber-soft)", border: "1px solid var(--tm-amber-border)" }}>
+                  <Icon name="sparkles" size={18} color="var(--tm-amber)" className="shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: "var(--tm-heading)" }}>Beat the rush today</p>
+                    <p className="text-xs mt-1 leading-relaxed">
+                      You usually leave at 6:50 PM. Head out in the next <span className="tm-mono" style={{ color: "var(--tm-amber)" }}>8 min</span> to skip the 7:00 PM crowd surge on Route 12.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Frequent Trips */}
+                <div>
+                  <p className="text-xs uppercase tm-eyebrow inline-block px-2 py-1 rounded-md mb-3">Frequent trips</p>
+                  <div className="flex flex-col gap-2.5">
+                    {QUICK_DESTINATIONS.map((q) => (
+                      <div key={q.key} onClick={() => goToRoutes(q.key, q.sub)} className="tm-card tm-hover p-3.5 rounded-xl flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg" style={{ background: "var(--tm-accent-soft)" }}>
+                            <Icon name={q.icon} size={15} color="var(--tm-accent)" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium" style={{ color: "var(--tm-heading)" }}>{q.label}</p>
+                            <p className="text-xs" style={{ color: "var(--tm-muted)" }}>{q.sub}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm tm-mono" style={{ color: "var(--tm-teal)" }}>{q.eta}</p>
+                          <p className="text-[10px]" style={{ color: "var(--tm-muted)" }}>{q.route}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="tm-card-alt p-3.5 rounded-xl">
+                    <p className="text-xs" style={{ color: "var(--tm-muted)" }}>Saved this week</p>
+                    <p className="tm-mono text-lg font-semibold mt-0.5" style={{ color: "var(--tm-teal)" }}>₹340</p>
+                  </div>
+                  <div className="tm-card-alt p-3.5 rounded-xl">
+                    <p className="text-xs" style={{ color: "var(--tm-muted)" }}>Avg. wait time</p>
+                    <p className="tm-mono text-lg font-semibold mt-0.5" style={{ color: "var(--tm-heading)" }}>4 min</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {screen === "routes" && (
+              <div className="p-6 flex flex-col gap-4 tm-fade-in">
+                <button onClick={() => setScreen("home")} className="tm-card-alt w-8 h-8 rounded-full flex items-center justify-center">
+                  <Icon name="arrowLeft" size={15} />
+                </button>
+                <div>
+                  <p className="text-xs tm-mono" style={{ color: "var(--tm-muted)" }}>SALT LAKE, SECTOR V →</p>
+                  <h1 className="tm-display text-xl font-semibold mt-0.5">{ROUTE_SETS[tripKey]?.title || "Destination"}</h1>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {(ROUTE_SETS[tripKey]?.options || ROUTE_SETS.default.options).map((opt) => (
+                    <div key={opt.key} onClick={() => handlePickRoute(opt)} className="tm-card tm-hover p-4 rounded-2xl flex flex-col gap-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase px-2 py-0.5 rounded-md tm-eyebrow font-mono">{opt.tag}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: CROWD_STYLE[opt.crowd]?.bg, color: CROWD_STYLE[opt.crowd]?.color }}>
+                          {opt.crowd} Crowd
+                        </span>
+                      </div>
+                      <p className="text-sm font-semibold" style={{ color: "var(--tm-heading)" }}>{opt.mode}</p>
+                      <p className="text-xs leading-relaxed" style={{ color: "var(--tm-body)" }}>{opt.detail}</p>
+                      <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: "var(--tm-border)" }}>
+                        <span className="text-xs tm-mono flex items-center gap-1"><Icon name="clock" size={12} /> {opt.time}</span>
+                        <span className="text-xs tm-mono flex items-center gap-1 font-semibold" style={{ color: "var(--tm-heading)" }}>{opt.fare}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {screen === "track" && trackingOption && (
+              <div className="p-6 flex flex-col gap-4 tm-fade-in">
+                <button onClick={() => setScreen("routes")} className="tm-card-alt w-8 h-8 rounded-full flex items-center justify-center">
+                  <Icon name="arrowLeft" size={15} />
+                </button>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs tm-mono" style={{ color: "var(--tm-accent)" }}>LIVE TRACKING &amp; SEAT CROWD</p>
+                    <h1 className="tm-display text-xl font-semibold mt-0.5">{trackingOption.mode}</h1>
+                  </div>
+                  <span className="text-xs tm-mono px-2 py-1 rounded-lg" style={{ background: "var(--tm-teal-soft)", color: "var(--tm-teal)" }}>
+                    In 4 min
+                  </span>
+                </div>
+
+                {/* Coach crowd matrix */}
+                <div className="tm-card p-4 rounded-2xl flex flex-col gap-2.5">
+                  <p className="text-xs font-semibold" style={{ color: "var(--tm-heading)" }}>Coach-by-Coach Platform Gate Intelligence</p>
+                  <p className="text-[11px]" style={{ color: "var(--tm-muted)" }}>Measured from your usual entry gate (Gate 3):</p>
+                  <div className="grid grid-cols-3 gap-2 mt-1">
+                    {[
+                      { id: "Gate 1", coach: "Coach 1", lvl: "Low", dist: "48m behind" },
+                      { id: "Gate 2", coach: "Coach 2", lvl: "Low", dist: "24m behind" },
+                      { id: "Gate 3", coach: "Coach 3 (Best)", lvl: "Low", dist: "You are here" },
+                      { id: "Gate 4", coach: "Coach 4", lvl: "Medium", dist: "24m ahead" },
+                      { id: "Gate 5", coach: "Coach 5", lvl: "Low", dist: "48m ahead" },
+                      { id: "Gate 6", coach: "Coach 6", lvl: "High", dist: "72m ahead" },
+                    ].map((c) => (
+                      <div key={c.id} className="p-2.5 rounded-xl text-center" style={{ background: CROWD_STYLE[c.lvl]?.bg, border: c.id.includes("Best") ? "1px solid var(--tm-teal)" : "1px solid var(--tm-border)" }}>
+                        <Icon name="armchair" size={15} color={CROWD_STYLE[c.lvl]?.color} />
+                        <p className="text-[11px] font-semibold mt-1" style={{ color: "var(--tm-heading)" }}>{c.coach}</p>
+                        <p className="text-[9px] tm-mono" style={{ color: CROWD_STYLE[c.lvl]?.color }}>{c.lvl}</p>
+                        <p className="text-[8px] mt-0.5" style={{ color: "var(--tm-muted)" }}>{c.dist}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="tm-card p-4 rounded-2xl">
+                  <p className="text-xs font-semibold mb-2" style={{ color: "var(--tm-heading)" }}>Route Itinerary</p>
+                  {trackingOption.stops.map((s, idx) => (
+                    <div key={s} className="flex items-center gap-2 py-1.5 text-xs">
+                      <Icon name="check" size={13} color="var(--tm-teal)" />
+                      <span style={{ color: idx === 0 ? "var(--tm-accent)" : "var(--tm-heading)" }}>{s}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <button onClick={() => { fireToast("Trip recorded to habits history!"); setScreen("home"); }} className="w-full py-3 rounded-xl text-xs font-medium" style={{ background: "var(--tm-accent)", color: "var(--tm-on-accent)" }}>
+                  Complete Trip
+                </button>
+              </div>
+            )}
+
+            {screen === "alerts" && (
+              <div className="p-6 flex flex-col gap-4 tm-fade-in">
+                <h1 className="tm-display text-xl font-semibold">Live Disruptions &amp; Alerts</h1>
+                <div className="flex flex-col gap-3">
+                  {alerts.map((a) => (
+                    <div key={a.id} className="tm-card p-4 rounded-2xl flex items-start gap-3">
+                      <div className="p-2 rounded-lg" style={{ background: "var(--tm-amber-soft)" }}>
+                        <Icon name="alert" size={16} color="var(--tm-amber)" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-semibold" style={{ color: "var(--tm-heading)" }}>{a.title}</p>
+                          <span className="text-[10px]" style={{ color: "var(--tm-muted)" }}>{a.time}</span>
+                        </div>
+                        <p className="text-xs mt-1 leading-relaxed">{a.message}</p>
+                        <span className="text-[10px] px-2 py-0.5 rounded tm-card-alt inline-block mt-2">{a.routeLabel}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {screen === "community" && (
+              <div className="p-6 flex flex-col gap-4 tm-fade-in">
+                <h1 className="tm-display text-xl font-semibold">Commuter Community</h1>
+                <div className="flex gap-2">
+                  <button onClick={() => {
+                    setPosts([{ id: `c-${Date.now()}`, userName: "You", type: "delay", routeLabel: "Route 12", message: "Bus held up near Tank No. 4.", time: "Just now", confirms: 1 }, ...posts]);
+                    fireToast("Report posted!");
+                  }} className="flex-1 py-2.5 rounded-xl text-xs font-medium tm-card-alt flex items-center justify-center gap-1.5">
+                    <Icon name="plus" size={13} /> Quick Report Delay
+                  </button>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {posts.map((p) => (
+                    <div key={p.id} className="tm-card p-4 rounded-2xl flex flex-col gap-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium" style={{ color: "var(--tm-heading)" }}>{p.userName}</span>
+                        <span style={{ color: "var(--tm-muted)" }}>{p.time}</span>
+                      </div>
+                      <p className="text-xs leading-relaxed" style={{ color: "var(--tm-body)" }}>{p.message}</p>
+                      <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: "var(--tm-border)" }}>
+                        <span className="text-[10px] tm-card-alt px-2 py-0.5 rounded">{p.routeLabel}</span>
+                        <button onClick={() => {
+                          setPosts(posts.map(item => item.id === p.id ? { ...item, confirms: item.confirms + 1 } : item));
+                          fireToast("Confirmed!");
+                        }} className="text-xs flex items-center gap-1" style={{ color: "var(--tm-accent)" }}>
+                          <Icon name="thumbsUp" size={12} /> Still happening · {p.confirms}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {screen === "habits" && (
+              <div className="p-6 flex flex-col gap-4 tm-fade-in">
+                <button onClick={() => setScreen("home")} className="tm-card-alt w-8 h-8 rounded-full flex items-center justify-center">
+                  <Icon name="arrowLeft" size={15} />
+                </button>
+                <h1 className="tm-display text-xl font-semibold">Commuter Habits Analyzer</h1>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="tm-card-alt p-3.5 rounded-xl">
+                    <p className="text-xs" style={{ color: "var(--tm-muted)" }}>Trips Taken</p>
+                    <p className="tm-mono text-lg font-bold mt-0.5" style={{ color: "var(--tm-heading)" }}>8 Trips</p>
+                  </div>
+                  <div className="tm-card-alt p-3.5 rounded-xl">
+                    <p className="text-xs" style={{ color: "var(--tm-muted)" }}>Saved vs. Cab</p>
+                    <p className="tm-mono text-lg font-bold mt-0.5" style={{ color: "var(--tm-teal)" }}>₹340</p>
+                  </div>
+                </div>
+                <div className="p-4 rounded-2xl" style={{ background: "var(--tm-accent-soft)", border: "1px solid var(--tm-accent-border)" }}>
+                  <p className="text-xs font-semibold" style={{ color: "var(--tm-heading)" }}>AI Pattern Insight</p>
+                  <p className="text-xs mt-1 leading-relaxed">Switching to Metro Blue Line on evening returns saves you 14 minutes and ₹45 daily compared to peak bus traffic.</p>
+                </div>
+              </div>
+            )}
+
+            {screen === "admin" && (
+              <div className="p-6 flex flex-col gap-4 tm-fade-in">
+                <button onClick={() => setScreen("home")} className="tm-card-alt w-8 h-8 rounded-full flex items-center justify-center">
+                  <Icon name="arrowLeft" size={15} />
+                </button>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs tm-mono" style={{ color: "var(--tm-accent)" }}>TRANSIT AUTHORITY</p>
+                    <h1 className="tm-display text-xl font-semibold mt-0.5">Admin &amp; SIH Simulator</h1>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: "var(--tm-teal-soft)", color: "var(--tm-teal)" }}>
+                    Live Engine
+                  </span>
+                </div>
+
+                {/* Delay Injector for Pitch */}
+                <div className="tm-card p-4 rounded-2xl flex flex-col gap-3">
+                  <p className="text-xs font-semibold" style={{ color: "var(--tm-heading)" }}>SIH Delay Injection Tool</p>
+                  <p className="text-[11px]" style={{ color: "var(--tm-muted)" }}>Trigger artificial delay during live pitch to show dynamic rerouting:</p>
+                  <div className="flex gap-2">
+                    {[5, 10, 15].map((m) => (
+                      <button key={m} onClick={() => {
+                        setAlerts([{ id: `a-${Date.now()}`, title: `Simulated Delay: +${m}m`, message: `Traffic delay injected on Route 12 corridor.`, time: "Just now", routeLabel: "Route 12" }, ...alerts]);
+                        fireToast(`Injected +${m}m delay on Route 12!`);
+                      }} className="flex-1 py-2 rounded-lg text-xs font-mono tm-card-alt" style={{ border: "1px solid var(--tm-border)" }}>
+                        +{m} min
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="tm-card p-4 rounded-2xl flex flex-col gap-2">
+                  <p className="text-xs font-semibold" style={{ color: "var(--tm-heading)" }}>Active Corridors</p>
+                  {["Route 12 (Salt Lake)", "Metro Blue Line", "Route 47 (Esplanade)"].map((c) => (
+                    <div key={c} className="flex items-center justify-between text-xs py-1">
+                      <span>{c}</span>
+                      <span className="text-[10px] font-mono" style={{ color: "var(--tm-teal)" }}>Optimal (28 km/h)</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Navigation Bar */}
+          <div className="tm-card-alt border-t px-4 py-3 flex items-center justify-between" style={{ borderColor: "var(--tm-border)" }}>
+            {[
+              { key: "home", label: "Home", icon: "home" },
+              { key: "routes", label: "Routes", icon: "compass" },
+              { key: "track", label: "Track", icon: "train" },
+              { key: "alerts", label: "Alerts", icon: "bell" },
+              { key: "community", label: "Community", icon: "users" },
+            ].map((item) => (
+              <button
+                key={item.key}
+                onClick={() => {
+                  if (item.key === "track" && !trackingOption) {
+                    setTrackingOption(ROUTE_SETS.home.options[0]);
+                  }
+                  setScreen(item.key);
+                }}
+                className={`flex flex-col items-center gap-1 flex-1 py-1 ${screen === item.key ? "tm-nav-active" : "tm-nav-inactive"}`}
+              >
+                <Icon name={item.icon} size={18} />
+                <span className="text-[10px]">{item.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {toast && <div className="tm-toast">{toast}</div>}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<TransitMateOfflineApp />);
+  </script>
+</body>
+</html>

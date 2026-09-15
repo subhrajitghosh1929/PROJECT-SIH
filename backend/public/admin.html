@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TransitMate — Transit Authority Backend Admin Portal (SIH 2026)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #0C0B0E;
+      --card: #151419;
+      --card-alt: #1C1B22;
+      --border: rgba(255, 255, 255, 0.08);
+      --heading: #F3EFE6;
+      --body: #B4B0A7;
+      --muted: #7C7970;
+      --accent: #C9A461;
+      --accent-soft: rgba(201, 164, 97, 0.15);
+      --teal: #45AD89;
+      --teal-soft: rgba(69, 173, 137, 0.15);
+      --amber: #D98B3F;
+      --amber-soft: rgba(217, 139, 63, 0.15);
+      --danger: #D9584A;
+      --danger-soft: rgba(217, 88, 74, 0.15);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--body);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .font-mono { font-family: 'IBM Plex Mono', monospace; }
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--heading);
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 600;
+    }
+    .badge-teal { background: var(--teal-soft); color: var(--teal); border: 1px solid var(--teal); }
+    .badge-amber { background: var(--amber-soft); color: var(--amber); border: 1px solid var(--amber); }
+    .badge-danger { background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger); }
+
+    main {
+      flex: 1;
+      padding: 24px 28px;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 24px;
+    }
+
+    @media (max-width: 1024px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--heading);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .stat-box {
+      background: var(--card-alt);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-val { font-size: 22px; font-weight: 700; color: var(--heading); margin-top: 4px; font-family: 'IBM Plex Mono', monospace; }
+
+    .fleet-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .fleet-grid { grid-template-columns: 1fr; }
+    }
+
+    .vehicle-card {
+      background: var(--card-alt);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .vehicle-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .vehicle-name { font-size: 14px; font-weight: 600; color: var(--heading); }
+    .vehicle-id { font-size: 11px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
+
+    .telemetry-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      background: var(--card);
+      border-radius: 8px;
+      padding: 8px 12px;
+      text-align: center;
+    }
+    .tel-item p:first-child { font-size: 10px; color: var(--muted); }
+    .tel-item p:last-child { font-size: 12px; font-weight: 600; color: var(--heading); font-family: 'IBM Plex Mono', monospace; }
+
+    .coach-heatmap {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      margin-top: 4px;
+    }
+    .coach-pill {
+      flex: 1;
+      padding: 4px 2px;
+      border-radius: 4px;
+      text-align: center;
+      font-size: 9px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 600;
+    }
+
+    .btn {
+      background: var(--accent);
+      color: #0C0B0E;
+      font-weight: 600;
+      font-size: 12px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-amber { background: var(--amber); color: #fff; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--body); }
+    .btn-outline:hover { background: var(--card-alt); color: var(--heading); }
+
+    .form-group { margin-bottom: 14px; }
+    .form-label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; font-family: 'IBM Plex Mono', monospace; }
+    .form-control {
+      width: 100%;
+      background: var(--card-alt);
+      border: 1px solid var(--border);
+      color: var(--heading);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      outline: none;
+      font-family: inherit;
+    }
+    .form-control:focus { border-color: var(--accent); }
+
+    .table-container {
+      overflow-x: auto;
+      margin-top: 12px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      text-align: left;
+    }
+    th {
+      background: var(--card-alt);
+      color: var(--muted);
+      font-weight: 600;
+      padding: 10px 12px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+    }
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--heading);
+      color: var(--bg);
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.25s ease;
+      z-index: 999;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    /* Admin Login Overlay */
+    #login-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(12, 11, 14, 0.96);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+    .login-box {
+      max-width: 440px;
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Strict Admin Auth Modal -->
+  <div id="login-overlay">
+    <div class="login-box">
+      <div style="font-size: 32px; margin-bottom: 12px;">🛡️</div>
+      <div class="badge badge-amber" style="margin-bottom: 10px; display: inline-block;">RESTRICTED ACCESS</div>
+      <h2 style="font-size: 20px; color: var(--heading); margin-bottom: 6px;">Transit Authority Admin Login</h2>
+      <p style="font-size: 12px; color: var(--muted); margin-bottom: 20px; line-height: 1.5;">
+        Only authorized transit administrators can access live GPS fleet controls, delay injectors, and database management.
+      </p>
+
+      <div id="login-error" style="display: none; background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger); padding: 10px 14px; border-radius: 8px; font-size: 12px; font-family: 'IBM Plex Mono', monospace; margin-bottom: 16px;"></div>
+
+      <form onsubmit="handlePortalLogin(event)">
+        <div class="form-group">
+          <label class="form-label">Admin Email / Gmail</label>
+          <input id="login-email" type="email" class="form-control" placeholder="admin@domain.com" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Admin Secure Password</label>
+          <input id="login-pwd" type="password" class="form-control" placeholder="••••••••••••" required />
+        </div>
+
+        <button type="submit" class="btn" style="width: 100%; padding: 12px; margin-top: 8px;">
+          Authenticate as Administrator
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <header>
+    <div class="logo">
+      <span>🚆</span>
+      <span>TransitMate <span style="color: var(--accent); font-weight: 400;">| Backend Admin Center</span></span>
+      <span class="badge badge-teal">SIH 2026 LIVE</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <span class="font-mono" style="font-size: 12px; color: var(--muted);">Admin: <strong id="logged-in-email" style="color: var(--accent);">transitmate.sih.admin@gmail.com</strong></span>
+      <button class="btn btn-outline" style="padding: 6px 12px; font-size: 11px;" onclick="handlePortalLogout()">🔒 Lock Admin</button>
+      <a href="http://localhost:5173/" target="_blank" class="btn btn-outline" style="text-decoration: none;">Open Commuter App ↗</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- Left Column: Fleet Telemetry & DB Records -->
+    <div>
+      <!-- Top Metrics -->
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="stat-label">Active Fleet</div>
+          <div class="stat-val" id="stat-fleet" style="color: var(--teal);">4</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Corridors Monitored</div>
+          <div class="stat-val" id="stat-corridors">5</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Commuters Served</div>
+          <div class="stat-val" id="stat-commuters" style="color: var(--accent);">10,000+</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Carbon Saved (CO₂)</div>
+          <div class="stat-val" id="stat-carbon" style="color: var(--teal);">34 kg</div>
+        </div>
+      </div>
+
+      <!-- Real-time Fleet Telemetry -->
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="card-title">
+          <span>📡 Real-Time GTFS/GPS Fleet Telemetry (Live Ticker)</span>
+          <span class="badge badge-teal" id="live-pulse">🟢 Ticking Every 2.5s</span>
+        </div>
+        <div class="fleet-grid" id="fleet-container">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- Live Database Explorer -->
+      <div class="card">
+        <div class="card-title">
+          <span>💾 Database Explorer (<code class="font-mono" style="color: var(--teal); font-size: 12px;">backend/data/database.json</code>)</span>
+          <button class="btn btn-outline" style="padding: 4px 10px; font-size: 11px;" onclick="loadDbData()">Refresh DB</button>
+        </div>
+        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+          <button class="btn btn-outline" onclick="switchDbTab('users')" id="tab-users">Users (<span id="count-users">0</span>)</button>
+          <button class="btn btn-outline" onclick="switchDbTab('posts')" id="tab-posts">Community Posts (<span id="count-posts">0</span>)</button>
+          <button class="btn btn-outline" onclick="switchDbTab('alerts')" id="tab-alerts">Disruption Alerts (<span id="count-alerts">0</span>)</button>
+        </div>
+        <div class="table-container" id="db-table-container">
+          <!-- Table rendered here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Pitch & Simulator Control Center -->
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+      
+      <!-- SIH Live Demo Delay Injector -->
+      <div class="card">
+        <div class="card-title">
+          <span>🎚️ SIH Delay Injector</span>
+          <span class="badge badge-amber">Judge Demo Tool</span>
+        </div>
+        <p style="font-size: 12px; color: var(--muted); margin-bottom: 14px; line-height: 1.5;">
+          Inject simulated traffic bottlenecks to demonstrate dynamic route recalculation live during jury presentation.
+        </p>
+
+        <div class="form-group">
+          <label class="form-label">Target Transit Line</label>
+          <select id="delay-route" class="form-control">
+            <option value="home">Route 12 (Salt Lake Sector V - Karunamoyee)</option>
+            <option value="office">Metro Blue Line (Sector V - Park Street)</option>
+            <option value="esplanade">Route 47 (Karunamoyee - Esplanade)</option>
+            <option value="default">Route 15 (Sector V - City Centre)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Delay Amount</label>
+          <select id="delay-mins" class="form-control font-mono">
+            <option value="5">+5 Minutes Delay</option>
+            <option value="10" selected>+10 Minutes Delay</option>
+            <option value="15">+15 Minutes Delay</option>
+            <option value="25">+25 Minutes Major Disruption</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Incident Reason</label>
+          <input id="delay-reason" class="form-control" value="Traffic backlog near Karunamoyee crossing" />
+        </div>
+
+        <button class="btn btn-amber" style="width: 100%;" onclick="injectDelay()">
+          🚨 Inject Simulated Delay
+        </button>
+      </div>
+
+      <!-- Instant Crowd Surge Modifier -->
+      <div class="card">
+        <div class="card-title">
+          <span>👥 Crowd Surge Modifier</span>
+        </div>
+        <p style="font-size: 12px; color: var(--muted); margin-bottom: 14px;">
+          Set corridor occupancy to test Coach Crowd Intelligence and platform gate walking distance calculations.
+        </p>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-outline" style="flex: 1; border-color: var(--teal); color: var(--teal);" onclick="setCrowd('Low')">
+            Set Low (Calm)
+          </button>
+          <button class="btn btn-outline" style="flex: 1; border-color: var(--danger); color: var(--danger);" onclick="setCrowd('High')">
+            Set High (Rush Hour)
+          </button>
+        </div>
+      </div>
+
+      <!-- Broadcast City-Wide Alert -->
+      <div class="card">
+        <div class="card-title">
+          <span>📢 Broadcast Transit Notice</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Alert Title</label>
+          <input id="broadcast-title" class="form-control" value="Platform Maintenance Notice" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Message</label>
+          <textarea id="broadcast-msg" class="form-control" rows="2">Platform 2 at Sector V under scheduled maintenance — board from Platform 1.</textarea>
+        </div>
+        <button class="btn btn-danger" style="width: 100%;" onclick="broadcastAlert()">
+          Push Live Disruption Notice
+        </button>
+      </div>
+
+      <!-- System Reset -->
+      <div class="card" style="border-color: var(--danger-soft);">
+        <div class="card-title" style="color: var(--danger);">
+          <span>🔄 Reset System</span>
+        </div>
+        <p style="font-size: 11px; color: var(--muted); margin-bottom: 12px;">
+          Reset all vehicles, simulation tickers, and database records back to the fresh seed state for a new demo round.
+        </p>
+        <button class="btn btn-outline" style="width: 100%; border-color: var(--danger); color: var(--danger);" onclick="resetBackend()">
+          Reset Database &amp; Fleet State
+        </button>
+      </div>
+
+    </div>
+  </main>
+
+  <div id="toast" class="toast">Action completed successfully</div>
+
+  <script>
+    let adminToken = sessionStorage.getItem('tm_portal_admin_token') || localStorage.getItem('tm_admin_token');
+    let dbCache = null;
+    let activeTab = 'users';
+
+    function getAdminHeaders() {
+      const headers = { 'Content-Type': 'application/json' };
+      if (adminToken) headers['Authorization'] = 'Bearer ' + adminToken;
+      return headers;
+    }
+
+    async function handlePortalLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-pwd').value;
+      const errBox = document.getElementById('login-error');
+      errBox.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/auth/admin-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+        if (data.success && data.token) {
+          adminToken = data.token;
+          sessionStorage.setItem('tm_portal_admin_token', data.token);
+          localStorage.setItem('tm_admin_token', data.token);
+          document.getElementById('logged-in-email').innerText = email;
+          document.getElementById('login-overlay').style.display = 'none';
+          showToast('✅ Authenticated as Transit Administrator');
+          fetchMetrics();
+          loadDbData();
+        } else {
+          errBox.innerText = data.message || '⛔ Access Denied: Invalid Admin Credentials.';
+          errBox.style.display = 'block';
+        }
+      } catch (err) {
+        errBox.innerText = '⛔ Connection failed to verify credentials.';
+        errBox.style.display = 'block';
+      }
+    }
+
+    function handlePortalLogout() {
+      sessionStorage.removeItem('tm_portal_admin_token');
+      localStorage.removeItem('tm_admin_token');
+      adminToken = null;
+      document.getElementById('login-overlay').style.display = 'flex';
+      showToast('🔒 Admin portal locked');
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    async function fetchMetrics() {
+      if (!adminToken) return;
+      try {
+        const res = await fetch('/api/admin/metrics', { headers: getAdminHeaders() });
+        if (res.status === 401 || res.status === 403) {
+          handlePortalLogout();
+          return;
+        }
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('stat-fleet').innerText = `${data.activeFleetCount} Vehicles`;
+          document.getElementById('stat-corridors').innerText = data.connectedCorridors.length;
+          document.getElementById('stat-carbon').innerText = `${data.estimatedCarbonSavedKg} kg`;
+          renderFleet(data.simulationFleet);
+        }
+      } catch (err) {
+        console.warn('Metrics fetch error:', err);
+      }
+    }
+
+    function renderFleet(fleet) {
+      const container = document.getElementById('fleet-container');
+      if (!fleet) return;
+
+      container.innerHTML = Object.values(fleet).map(v => {
+        const crowdColor = v.crowdLevel === 'High' ? 'var(--danger)' : v.crowdLevel === 'Low' ? 'var(--teal)' : 'var(--amber)';
+        const crowdBg = v.crowdLevel === 'High' ? 'var(--danger-soft)' : v.crowdLevel === 'Low' ? 'var(--teal-soft)' : 'var(--amber-soft)';
+        
+        return `
+          <div class="vehicle-card">
+            <div class="vehicle-header">
+              <div>
+                <div class="vehicle-name">${v.vehicleType === 'metro' ? '🚇' : '🚌'} ${v.routeLabel}</div>
+                <div class="vehicle-id">${v.vehicleId}</div>
+              </div>
+              <span class="badge" style="background: ${crowdBg}; color: ${crowdColor}; border: 1px solid ${crowdColor};">
+                ${v.crowdLevel} Crowd
+              </span>
+            </div>
+
+            <div class="telemetry-row">
+              <div class="tel-item">
+                <p>PHASE</p>
+                <p style="text-transform: capitalize;">${v.phase}</p>
+              </div>
+              <div class="tel-item">
+                <p>ETA BOARD</p>
+                <p style="color: var(--teal);">${v.etaToBoardMin} min</p>
+              </div>
+              <div class="tel-item">
+                <p>SPEED</p>
+                <p>${v.speedKmH} km/h</p>
+              </div>
+            </div>
+
+            <div style="font-size: 11px; color: var(--body); display: flex; align-items: center; gap: 6px;">
+              <span>📍</span>
+              <span class="font-mono">${v.currentStop}</span>
+            </div>
+
+            ${v.coachCrowds ? `
+              <div>
+                <div style="font-size: 10px; color: var(--muted); margin-bottom: 4px;">COACH DENSITIES (1 to ${v.coachCrowds.length}):</div>
+                <div class="coach-heatmap">
+                  ${v.coachCrowds.map((lvl, idx) => {
+                    const cCol = lvl === 'High' ? 'var(--danger)' : lvl === 'Low' ? 'var(--teal)' : 'var(--amber)';
+                    const cBg = lvl === 'High' ? 'var(--danger-soft)' : lvl === 'Low' ? 'var(--teal-soft)' : 'var(--amber-soft)';
+                    return `<div class="coach-pill" style="background: ${cBg}; color: ${cCol}; border: 1px solid ${cCol};">C${idx+1}:${lvl[0]}</div>`;
+                  }).join('')}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function loadDbData() {
+      if (!adminToken) return;
+      try {
+        const res = await fetch('/api/admin/database', { headers: getAdminHeaders() });
+        const json = await res.json();
+        if (json.success) {
+          dbCache = json.data;
+          document.getElementById('count-users').innerText = dbCache.users?.length || 0;
+          document.getElementById('count-posts').innerText = dbCache.communityPosts?.length || 0;
+          document.getElementById('count-alerts').innerText = dbCache.alerts?.length || 0;
+          renderDbTable();
+        }
+      } catch (err) {
+        console.warn('DB load error:', err);
+      }
+    }
+
+    function switchDbTab(tab) {
+      activeTab = tab;
+      document.getElementById('tab-users').style.borderColor = tab === 'users' ? 'var(--accent)' : 'var(--border)';
+      document.getElementById('tab-posts').style.borderColor = tab === 'posts' ? 'var(--accent)' : 'var(--border)';
+      document.getElementById('tab-alerts').style.borderColor = tab === 'alerts' ? 'var(--accent)' : 'var(--border)';
+      renderDbTable();
+    }
+
+    function renderDbTable() {
+      const container = document.getElementById('db-table-container');
+      if (!dbCache) return;
+
+      if (activeTab === 'users') {
+        const rows = (dbCache.users || []).map(u => `
+          <tr>
+            <td class="font-mono">${u.id}</td>
+            <td><strong>${u.name}</strong></td>
+            <td class="font-mono" style="color: var(--accent);">${u.email}</td>
+            <td><span class="badge ${u.role === 'admin' ? 'badge-amber' : 'badge-teal'}">${u.role || 'commuter'}</span></td>
+          </tr>
+        `).join('');
+        container.innerHTML = `<table><thead><tr><th>User ID</th><th>Name</th><th>Email</th><th>Role</th></tr></thead><tbody>${rows}</tbody></table>`;
+      } else if (activeTab === 'posts') {
+        const rows = (dbCache.communityPosts || []).map(p => `
+          <tr>
+            <td class="font-mono">${p.id}</td>
+            <td><strong>${p.userName || 'Commuter'}</strong></td>
+            <td><span class="badge badge-amber">${p.routeLabel}</span></td>
+            <td>${p.message}</td>
+            <td class="font-mono" style="color: var(--teal);">👍 ${p.confirms}</td>
+          </tr>
+        `).join('');
+        container.innerHTML = `<table><thead><tr><th>ID</th><th>Author</th><th>Route</th><th>Message</th><th>Upvotes</th></tr></thead><tbody>${rows}</tbody></table>`;
+      } else if (activeTab === 'alerts') {
+        const rows = (dbCache.alerts || []).map(a => `
+          <tr>
+            <td class="font-mono">${a.id}</td>
+            <td><strong>${a.title}</strong></td>
+            <td><span class="badge badge-danger">${a.routeLabel}</span></td>
+            <td>${a.message}</td>
+          </tr>
+        `).join('');
+        container.innerHTML = `<table><thead><tr><th>ID</th><th>Title</th><th>Route</th><th>Details</th></tr></thead><tbody>${rows}</tbody></table>`;
+      }
+    }
+
+    async function injectDelay() {
+      const tripKey = document.getElementById('delay-route').value;
+      const delayMinutes = document.getElementById('delay-mins').value;
+      const reason = document.getElementById('delay-reason').value;
+
+      const res = await fetch('/api/admin/inject-delay', {
+        method: 'POST',
+        headers: getAdminHeaders(),
+        body: JSON.stringify({ tripKey, delayMinutes, reason }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`✅ Injected +${delayMinutes}m delay on ${tripKey.toUpperCase()}`);
+        fetchMetrics();
+        loadDbData();
+      } else {
+        showToast(data.message || 'Error injecting delay');
+      }
+    }
+
+    async function setCrowd(level) {
+      const tripKey = document.getElementById('delay-route').value;
+      const res = await fetch('/api/admin/set-crowd', {
+        method: 'POST',
+        headers: getAdminHeaders(),
+        body: JSON.stringify({ tripKey, crowdLevel: level }),
+      });
+      if (res.ok) {
+        showToast(`✅ Crowd set to ${level} on ${tripKey.toUpperCase()}`);
+        fetchMetrics();
+      }
+    }
+
+    async function broadcastAlert() {
+      const title = document.getElementById('broadcast-title').value;
+      const message = document.getElementById('broadcast-msg').value;
+
+      const res = await fetch('/api/admin/broadcast-alert', {
+        method: 'POST',
+        headers: getAdminHeaders(),
+        body: JSON.stringify({ title, message, type: 'disruption', tone: 'danger' }),
+      });
+      if (res.ok) {
+        showToast('📢 City-Wide Notice Broadcasted Live!');
+        loadDbData();
+      }
+    }
+
+    async function resetBackend() {
+      if (confirm('Reset simulation and database to initial seed state?')) {
+        const res = await fetch('/api/admin/reset', { method: 'POST', headers: getAdminHeaders() });
+        if (res.ok) {
+          showToast('🔄 Backend Reset to Seed State');
+          fetchMetrics();
+          loadDbData();
+        }
+      }
+    }
+
+    // Init: Check if already authenticated
+    if (adminToken) {
+      document.getElementById('login-overlay').style.display = 'none';
+      fetchMetrics();
+      loadDbData();
+      switchDbTab('users');
+      setInterval(fetchMetrics, 2500);
+    } else {
+      document.getElementById('login-overlay').style.display = 'flex';
+    }
+  </script>
+</body>
+</html>
