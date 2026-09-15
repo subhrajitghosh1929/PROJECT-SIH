@@ -62,3 +62,4 @@ in a few minutes.
 
 These were discussed in detail during prototyping — ask your AI assistant
 to pick the conversation back up when you're ready for that stage.
+.
