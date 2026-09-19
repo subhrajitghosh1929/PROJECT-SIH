@@ -50,7 +50,7 @@ import {
   Sliders,
   Database,
 } from "lucide-react";
-import { api } from "./services/api.js";
+import { api, API_BASE_URL } from "./services/api.js";
 
 const DEFAULT_QUICK_DESTINATIONS = [
   {
@@ -355,7 +355,7 @@ export default function TransitMateApp() {
   useEffect(() => {
     const checkServer = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/health");
+        const res = await fetch(`${API_BASE_URL}/health`);
         if (res.ok) {
           setBackendOnline(true);
         } else {
@@ -596,7 +596,7 @@ export default function TransitMateApp() {
               className="w-1.5 h-1.5 rounded-full animate-pulse"
               style={{ background: backendOnline ? "var(--tm-teal)" : "var(--tm-muted)" }}
             />
-            {backendOnline ? "LIVE (Port 5000)" : "OFFLINE"}
+            {backendOnline ? (API_BASE_URL.includes("localhost") ? "LIVE (Port 5000)" : "LIVE (Cloud API)") : "OFFLINE"}
           </span>
         </div>
 

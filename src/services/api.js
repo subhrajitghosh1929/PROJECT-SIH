@@ -4,7 +4,9 @@
  * Includes resilient local fallback and strict Admin Role-Based Authentication.
  */
 
-const API_BASE_URL = 'http://localhost:5000/api';
+export const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL)
+  ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api`
+  : 'http://localhost:5000/api';
 
 class ApiService {
   constructor() {
