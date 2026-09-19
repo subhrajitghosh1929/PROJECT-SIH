@@ -151,6 +151,28 @@ class ApiService {
     getRouteSet: async (tripKey) => {
       return this.request(`/routes/${tripKey}`);
     },
+
+    getWbtcRoutes: async ({ q = '', ac = '', page = 1, limit = 50 } = {}) => {
+      const params = new URLSearchParams();
+      if (q) params.append('q', q);
+      if (ac !== '') params.append('ac', ac);
+      if (page) params.append('page', page);
+      if (limit) params.append('limit', limit);
+      return this.request(`/routes/wbtc?${params.toString()}`);
+    },
+
+    getWbtcRouteDetails: async (routeNo) => {
+      return this.request(`/routes/wbtc/${encodeURIComponent(routeNo)}`);
+    },
+
+    getNearby: async (lat, lng, radius = 3.0) => {
+      const params = new URLSearchParams({ lat, lng, radius });
+      return this.request(`/routes/nearby?${params.toString()}`);
+    },
+
+    syncWbtc: async () => {
+      return this.request('/routes/wbtc/sync', { method: 'POST' });
+    },
   };
 
   // --- Live Vehicle Tracking & Crowd Intelligence ---

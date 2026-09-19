@@ -51,6 +51,10 @@ import {
   Database,
 } from "lucide-react";
 import { api, API_BASE_URL } from "./services/api.js";
+import InteractiveMap from "./components/InteractiveMap.jsx";
+import WbtcRouteExplorer from "./components/WbtcRouteExplorer.jsx";
+import { useGeolocation, KOLKATA_PRESETS } from "./hooks/useGeolocation.js";
+import { buildRouteCoordinates, interpolatePositionAlongPath } from "./utils/geoUtils.js";
 
 const DEFAULT_QUICK_DESTINATIONS = [
   {
@@ -82,6 +86,7 @@ const DEFAULT_QUICK_DESTINATIONS = [
 const NAV_ITEMS = [
   { key: "home", label: "Home", icon: HomeIcon },
   { key: "routes", label: "Routes", icon: Compass },
+  { key: "wbtc", label: "WBTC", icon: Bus },
   { key: "track", label: "Track", icon: TrainFront },
   { key: "alerts", label: "Alerts", icon: Bell },
   { key: "community", label: "Community", icon: Users },
@@ -412,6 +417,9 @@ export default function TransitMateApp() {
     goToRoutes(item.key, item.sub);
   };
 
+  const userLocation = useGeolocation('sector-v');
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+
   const handleNav = (item) => {
     if (item.key === "home") {
       setScreen("home");
@@ -419,6 +427,10 @@ export default function TransitMateApp() {
     }
     if (item.key === "routes") {
       setScreen("routes");
+      return;
+    }
+    if (item.key === "wbtc") {
+      setScreen("wbtc");
       return;
     }
     if (item.key === "track") {
@@ -439,6 +451,33 @@ export default function TransitMateApp() {
       return;
     }
     fireToast(`${item.label} screen — coming in the next build`);
+  };
+
+  const handleSelectWbtcRoute = (route) => {
+    const stops = route.stops || [route.origin, route.destination];
+    const option = {
+      key: route.id,
+      tag: route.isAC ? "AC Express" : "WBTC City Bus",
+      mode: `Bus · Route ${route.routeNo}`,
+      time: `${Math.max(15, Math.round(stops.length * 2.5))} min`,
+      fare: `₹${route.fareMin || 15}`,
+      crowd: "Medium",
+      detail: `${route.origin} to ${route.destination} (${stops.length} stops)`,
+      vehicleType: "bus",
+      tripKey: "wbtc",
+      stops: stops,
+      stopDetails: route.stopDetails,
+      pathCoordinates: route.pathCoordinates,
+      approach: {
+        stopsAway: 2,
+        currentlyAt: `Approaching ${stops[1] || route.origin}`,
+        etaToBoardMin: 5,
+      },
+    };
+    setDestination(route.destination);
+    setTrackingOption(option);
+    setScreen("track");
+    fireToast(`Tracking WBTC Route ${route.routeNo} on Live Map`);
   };
 
   const handlePickRoute = (option) => {
@@ -600,6 +639,89 @@ export default function TransitMateApp() {
           </span>
         </div>
 
+        {/* Commuter Live Location Bar */}
+        <div
+          onClick={() => setShowLocationPicker(true)}
+          className="px-5 py-2 flex items-center justify-between text-[11px] cursor-pointer tm-card-alt tm-hover transition"
+          style={{ borderBottom: "1px solid var(--tm-border)" }}
+          title="Click to view or change commuter location"
+        >
+          <div className="flex items-center gap-1.5 truncate">
+            <MapPin size={12} style={{ color: userLocation.coords.source === "gps" ? "#38bdf8" : "var(--tm-accent)" }} />
+            <span className="truncate font-medium" style={{ color: "var(--tm-heading)" }}>
+              {userLocation.coords.source === "gps" ? "My Live GPS Location" : userLocation.coords.presetName}
+            </span>
+          </div>
+          <span className="text-[10px] shrink-0 font-medium hover:underline" style={{ color: "var(--tm-accent)" }}>
+            Change / GPS
+          </span>
+        </div>
+
+        {/* Location Picker & GPS Modal */}
+        {showLocationPicker && (
+          <div
+            className="absolute inset-x-0 top-0 z-50 p-5 tm-fade-in flex flex-col gap-3 rounded-3xl"
+            style={{ background: "rgba(15, 23, 42, 0.96)", backdropFilter: "blur(12px)", border: "1px solid var(--tm-border)" }}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-1.5">
+                <Navigation size={14} className="text-sky-400" />
+                Commuter Location & GPS
+              </h3>
+              <button onClick={() => setShowLocationPicker(false)} className="text-xs text-gray-400 hover:text-white">
+                ✕
+              </button>
+            </div>
+            <p className="text-xs text-gray-300">
+              Select your location to discover nearest bus stops and calculate real walking times to WBTC routes.
+            </p>
+
+            <button
+              onClick={() => {
+                userLocation.requestRealLocation();
+                setShowLocationPicker(false);
+                fireToast("Fetching browser GPS location...");
+              }}
+              disabled={userLocation.isLocating}
+              className="w-full py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition"
+              style={{ background: "#38bdf8", color: "#0f172a" }}
+            >
+              <Navigation size={14} className={userLocation.isLocating ? "animate-spin" : ""} />
+              {userLocation.isLocating ? "Acquiring GPS Signal..." : "Use My Real GPS Location (Browser)"}
+            </button>
+
+            <div className="pt-2 border-t border-slate-700/60">
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                Or Simulate Kolkata Transit Hub
+              </p>
+              <div className="grid grid-cols-1 gap-1.5">
+                {KOLKATA_PRESETS.map((preset) => {
+                  const isSelected = userLocation.coords.presetName === preset.name && userLocation.coords.source === "preset";
+                  return (
+                    <button
+                      key={preset.id}
+                      onClick={() => {
+                        userLocation.setPresetLocation(preset.id);
+                        setShowLocationPicker(false);
+                        fireToast(`Location set to ${preset.name}`);
+                      }}
+                      className="py-2 px-3 rounded-xl text-xs flex items-center justify-between transition text-left"
+                      style={{
+                        background: isSelected ? "rgba(201, 164, 97, 0.2)" : "rgba(30, 41, 59, 0.7)",
+                        border: `1px solid ${isSelected ? "var(--tm-accent)" : "rgba(255, 255, 255, 0.08)"}`,
+                        color: isSelected ? "var(--tm-accent)" : "#e2e8f0",
+                      }}
+                    >
+                      <span className="font-medium">{preset.name}</span>
+                      {isSelected && <CheckCircle2 size={14} style={{ color: "var(--tm-accent)" }} />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
         {!authed ? (
           <LoginScreen
             authMode={authMode}
@@ -631,6 +753,8 @@ export default function TransitMateApp() {
                 onOpenHabits={() => setScreen("habits")}
                 onOpenSettings={() => setScreen("settings")}
                 onOpenAdmin={() => setScreen("admin")}
+                onOpenWbtc={() => setScreen("wbtc")}
+                currentLocationName={userLocation.coords.presetName || "Live GPS"}
                 userName={userName}
               />
             )}
@@ -642,7 +766,35 @@ export default function TransitMateApp() {
                 routePriority={routePriority}
                 onBack={() => setScreen("home")}
                 onPick={handlePickRoute}
+                onOpenWbtc={() => setScreen("wbtc")}
               />
+            )}
+
+            {screen === "wbtc" && (
+              <div className="tm-screen-fade flex flex-col flex-1 min-h-0 relative p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <button
+                    onClick={() => setScreen("home")}
+                    className="w-8 h-8 rounded-full flex items-center justify-center tm-card-alt"
+                    aria-label="Back to home"
+                  >
+                    <ArrowLeft size={16} style={{ color: "var(--tm-heading)" }} />
+                  </button>
+                  <div>
+                    <h1 className="text-base font-bold" style={{ color: "var(--tm-heading)" }}>
+                      WBTC City Bus Network
+                    </h1>
+                    <p className="text-xs" style={{ color: "var(--tm-muted)" }}>
+                      Live Kolkata corridors & interactive map
+                    </p>
+                  </div>
+                </div>
+                <WbtcRouteExplorer
+                  userCoords={userLocation.coords}
+                  onSelectRouteForMap={handleSelectWbtcRoute}
+                  onToast={fireToast}
+                />
+              </div>
             )}
 
             {screen === "track" && trackingOption && (
@@ -651,6 +803,8 @@ export default function TransitMateApp() {
                 destinationLabel={destination}
                 unitPref={unitPref}
                 backendOnline={backendOnline}
+                userCoords={userLocation.coords}
+                theme={theme}
                 onBack={() => setScreen("routes")}
                 onDone={async () => {
                   try {
@@ -1543,6 +1697,8 @@ function HomeScreen({
   onOpenHabits,
   onOpenSettings,
   onOpenAdmin,
+  onOpenWbtc,
+  currentLocationName,
   userName,
 }) {
   const [quickDestinations, setQuickDestinations] = useState(DEFAULT_QUICK_DESTINATIONS);
@@ -1588,7 +1744,7 @@ function HomeScreen({
               Evening, {userName || "Rhea"}
             </h1>
             <p className="text-sm mt-1" style={{ color: "var(--tm-muted)" }}>
-              Salt Lake, Sector V
+              {currentLocationName || "Salt Lake, Sector V"}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -1641,6 +1797,36 @@ function HomeScreen({
             <Search size={15} color="var(--tm-on-accent)" />
           </button>
         </div>
+
+        {/* WBTC City Bus Network Banner */}
+        <button
+          onClick={onOpenWbtc}
+          className="tm-card tm-hover rounded-2xl p-4 flex items-center justify-between text-left transition"
+          style={{ border: "1px solid var(--tm-accent-border)", background: "var(--tm-accent-soft)" }}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: "var(--tm-accent)" }}
+            >
+              <Bus size={18} color="var(--tm-on-accent)" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold" style={{ color: "var(--tm-heading)" }}>
+                  WBTC City Bus Network
+                </p>
+                <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-emerald-500/20 text-emerald-400 font-medium">
+                  Live 132+ Routes
+                </span>
+              </div>
+              <p className="text-xs mt-0.5" style={{ color: "var(--tm-muted)" }}>
+                Explore live Kolkata bus corridors, stops & Google Maps
+              </p>
+            </div>
+          </div>
+          <ChevronRight size={16} style={{ color: "var(--tm-muted)" }} className="shrink-0" />
+        </button>
 
         <div
           className="tm-fade-in rounded-2xl p-4 flex gap-3 items-start"
@@ -1766,7 +1952,23 @@ function pointAtT(points, t) {
 
 const toPolyline = (points) => points.map((p) => `${p.x},${p.y}`).join(" ");
 
-function RouteMiniMap({ progressPercent, segment, vehicleType, destinationLabel }) {
+function RouteMiniMap({
+  progressPercent,
+  segment,
+  vehicleType,
+  destinationLabel,
+  stops = [],
+  pathCoordinates = null,
+  stopDetails = null,
+  userCoords = null,
+  theme = "dark"
+}) {
+  const [mapMode, setMapMode] = useState("interactive");
+
+  const realStops = stopDetails || buildRouteCoordinates(stops);
+  const routePath = pathCoordinates || realStops.map((s) => ({ lat: s.lat, lng: s.lng }));
+  const vehiclePos = interpolatePositionAlongPath(routePath, progressPercent / 100);
+
   const stopPoint = MAP_PATH[MAP_STOP_INDEX];
   const destPoint = MAP_PATH[MAP_PATH.length - 1];
   const activePoints =
@@ -1775,69 +1977,97 @@ function RouteMiniMap({ progressPercent, segment, vehicleType, destinationLabel 
   const VehicleIcon = vehicleType === "metro" ? TrainFront : Bus;
 
   return (
-    <div className="tm-card rounded-2xl overflow-hidden relative" style={{ height: 190 }}>
-      <svg viewBox="0 0 300 190" className="w-full h-full" preserveAspectRatio="none">
-        <g stroke="var(--tm-border)" strokeWidth="1">
-          <line x1="0" y1="36" x2="300" y2="18" />
-          <line x1="0" y1="112" x2="300" y2="128" />
-          <line x1="40" y1="0" x2="86" y2="190" />
-          <line x1="196" y1="0" x2="224" y2="190" />
-        </g>
-        <polyline
-          points={toPolyline(MAP_PATH)}
-          fill="none"
-          stroke="var(--tm-border)"
-          strokeWidth="5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <polyline
-          points={toPolyline(activePoints)}
-          fill="none"
-          stroke="var(--tm-accent)"
-          strokeWidth="4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          opacity="0.85"
-        />
-        <circle cx={stopPoint.x} cy={stopPoint.y} r="6" fill="var(--tm-card)" stroke="var(--tm-heading)" strokeWidth="2" />
-        <circle
-          cx={destPoint.x}
-          cy={destPoint.y}
-          r={segment === "onward" ? 7 : 5}
-          fill={segment === "onward" ? "var(--tm-teal)" : "var(--tm-card)"}
-          stroke={segment === "onward" ? "var(--tm-card)" : "var(--tm-border)"}
-          strokeWidth="2"
-        />
-      </svg>
-      <div
-        className="absolute rounded-full flex items-center justify-center"
-        style={{
-          width: 22,
-          height: 22,
-          left: `${(marker.x / 300) * 100}%`,
-          top: `${(marker.y / 190) * 100}%`,
-          transform: "translate(-50%, -50%)",
-          background: "var(--tm-accent-2)",
-          boxShadow: "0 0 10px 1px rgba(201,164,97,0.45)",
-          transition: "left 0.4s linear, top 0.4s linear",
-        }}
-      >
-        <VehicleIcon size={12} color="var(--tm-on-accent)" />
-      </div>
-      <span
-        className="absolute left-2 bottom-2 text-[9px] px-1.5 py-0.5 rounded"
-        style={{ background: "var(--tm-card-alt)", color: "var(--tm-muted)" }}
-      >
-        Your stop
-      </span>
-      {segment === "onward" && (
-        <span
-          className="absolute right-2 top-2 text-[9px] px-1.5 py-0.5 rounded max-w-[45%] truncate"
-          style={{ background: "var(--tm-teal-soft)", color: "var(--tm-teal)" }}
-        >
-          {destinationLabel}
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between px-1 text-[11px]" style={{ color: "var(--tm-muted)" }}>
+        <span className="flex items-center gap-1.5 font-medium">
+          <Compass size={12} className="text-[var(--tm-accent)]" />
+          {mapMode === "interactive" ? "Google Maps / Live Corridor" : "Schematic View"}
         </span>
+        <button
+          onClick={() => setMapMode(mapMode === "interactive" ? "schematic" : "interactive")}
+          className="text-[10px] font-medium hover:underline flex items-center gap-1"
+          style={{ color: "var(--tm-accent)" }}
+        >
+          {mapMode === "interactive" ? "Show Schematic" : "Show Live Map"}
+        </button>
+      </div>
+
+      {mapMode === "interactive" ? (
+        <InteractiveMap
+          userCoords={userCoords}
+          routePath={routePath}
+          stops={realStops}
+          vehiclePos={{ ...vehiclePos, label: `${vehicleType.toUpperCase()} in transit` }}
+          vehicleType={vehicleType}
+          height={210}
+          theme={theme}
+        />
+      ) : (
+        <div className="tm-card rounded-2xl overflow-hidden relative" style={{ height: 190 }}>
+          <svg viewBox="0 0 300 190" className="w-full h-full" preserveAspectRatio="none">
+            <g stroke="var(--tm-border)" strokeWidth="1">
+              <line x1="0" y1="36" x2="300" y2="18" />
+              <line x1="0" y1="112" x2="300" y2="128" />
+              <line x1="40" y1="0" x2="86" y2="190" />
+              <line x1="196" y1="0" x2="224" y2="190" />
+            </g>
+            <polyline
+              points={toPolyline(MAP_PATH)}
+              fill="none"
+              stroke="var(--tm-border)"
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <polyline
+              points={toPolyline(activePoints)}
+              fill="none"
+              stroke="var(--tm-accent)"
+              strokeWidth="4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.85"
+            />
+            <circle cx={stopPoint.x} cy={stopPoint.y} r="6" fill="var(--tm-card)" stroke="var(--tm-heading)" strokeWidth="2" />
+            <circle
+              cx={destPoint.x}
+              cy={destPoint.y}
+              r={segment === "onward" ? 7 : 5}
+              fill={segment === "onward" ? "var(--tm-teal)" : "var(--tm-card)"}
+              stroke={segment === "onward" ? "var(--tm-card)" : "var(--tm-border)"}
+              strokeWidth="2"
+            />
+          </svg>
+          <div
+            className="absolute rounded-full flex items-center justify-center"
+            style={{
+              width: 22,
+              height: 22,
+              left: `${(marker.x / 300) * 100}%`,
+              top: `${(marker.y / 190) * 100}%`,
+              transform: "translate(-50%, -50%)",
+              background: "var(--tm-accent-2)",
+              boxShadow: "0 0 10px 1px rgba(201,164,97,0.45)",
+              transition: "left 0.4s linear, top 0.4s linear",
+            }}
+          >
+            <VehicleIcon size={12} color="var(--tm-on-accent)" />
+          </div>
+          <span
+            className="absolute left-2 bottom-2 text-[9px] px-1.5 py-0.5 rounded"
+            style={{ background: "var(--tm-card-alt)", color: "var(--tm-muted)" }}
+          >
+            Your stop
+          </span>
+          {segment === "onward" && (
+            <span
+              className="absolute right-2 top-2 text-[9px] px-1.5 py-0.5 rounded max-w-[45%] truncate"
+              style={{ background: "var(--tm-teal-soft)", color: "var(--tm-teal)" }}
+            >
+              {destinationLabel}
+            </span>
+          )}
+        </div>
       )}
     </div>
   );
@@ -1848,7 +2078,15 @@ function parseMinutes(timeText) {
   return match ? parseInt(match[0], 10) : 20;
 }
 
-function TrackingScreen({ option, destinationLabel, unitPref, onBack, onDone }) {
+function TrackingScreen({
+  option,
+  destinationLabel,
+  unitPref,
+  userCoords,
+  theme,
+  onBack,
+  onDone,
+}) {
   const totalMinutes = parseMinutes(option.time);
   const stops = option.stops || [];
   const approach = option.approach || { stopsAway: 0, currentlyAt: "Nearby", etaToBoardMin: 3 };
@@ -1985,6 +2223,11 @@ function TrackingScreen({ option, destinationLabel, unitPref, onBack, onDone }) 
               segment="approach"
               vehicleType={option.vehicleType}
               destinationLabel={destinationLabel}
+              stops={stops}
+              pathCoordinates={option.pathCoordinates}
+              stopDetails={option.stopDetails}
+              userCoords={userCoords}
+              theme={theme}
             />
 
             <button
@@ -2044,6 +2287,11 @@ function TrackingScreen({ option, destinationLabel, unitPref, onBack, onDone }) 
               segment="onward"
               vehicleType={option.vehicleType}
               destinationLabel={destinationLabel || stops[stops.length - 1]}
+              stops={stops}
+              pathCoordinates={option.pathCoordinates}
+              stopDetails={option.stopDetails}
+              userCoords={userCoords}
+              theme={theme}
             />
 
             <div className="flex flex-col gap-2">
