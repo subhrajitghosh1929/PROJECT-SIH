@@ -4,9 +4,18 @@
  * Includes resilient local fallback and strict Admin Role-Based Authentication.
  */
 
-export const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL)
-  ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api`
-  : 'http://localhost:5000/api';
+export const API_BASE_URL = (() => {
+  // 1. Explicit env var override (set VITE_API_URL in Vercel dashboard or .env)
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) {
+    return `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api`;
+  }
+  // 2. Auto-detect: if running on a deployed domain (not localhost), use same-origin API
+  if (typeof window !== 'undefined' && window.location && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')) {
+    return `${window.location.origin}/api`;
+  }
+  // 3. Default: local development
+  return 'http://localhost:5000/api';
+})();
 
 class ApiService {
   constructor() {

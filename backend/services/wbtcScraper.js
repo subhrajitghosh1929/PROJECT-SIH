@@ -4,7 +4,14 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DATA_FILE = path.join(__dirname, '..', 'data', 'wbtc_routes.json');
+
+// On Vercel serverless, the project directory is read-only; use /tmp for writes
+const IS_VERCEL = !!process.env.VERCEL;
+const DATA_FILE = IS_VERCEL
+  ? '/tmp/data/wbtc_routes.json'
+  : path.join(__dirname, '..', 'data', 'wbtc_routes.json');
+// Bundled seed data shipped with the repo (read-only on Vercel)
+const SEED_DATA_FILE = path.join(__dirname, '..', 'data', 'wbtc_routes.json');
 
 // Reference coordinates for major Kolkata transit stops & landmarks
 const KOLKATA_COORDINATES = {
@@ -210,30 +217,41 @@ export async function scrapeWbtcCityBusRoutes() {
     });
 
     // Save to disk cache
-    fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
-    fs.writeFileSync(DATA_FILE, JSON.stringify(enrichedRoutes, null, 2), 'utf8');
-    console.log(`[WBTC Scraper] Successfully saved ${enrichedRoutes.length} enriched routes to ${DATA_FILE}`);
+    try {
+      fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
+      fs.writeFileSync(DATA_FILE, JSON.stringify(enrichedRoutes, null, 2), 'utf8');
+      console.log(`[WBTC Scraper] Successfully saved ${enrichedRoutes.length} enriched routes to ${DATA_FILE}`);
+    } catch (writeErr) {
+      console.warn('[WBTC Scraper] Could not write cache (read-only fs):', writeErr.message);
+    }
     return enrichedRoutes;
 
   } catch (err) {
     console.error('[WBTC Scraper] Error scraping WBTC routes:', err.message);
-    // Fallback: Return cached if file exists
-    if (fs.existsSync(DATA_FILE)) {
-      console.log('[WBTC Scraper] Serving from existing disk cache.');
-      const data = fs.readFileSync(DATA_FILE, 'utf8');
-      return JSON.parse(data);
+    // Fallback: Return cached if file exists (try writable cache, then bundled seed)
+    for (const f of [DATA_FILE, SEED_DATA_FILE]) {
+      if (fs.existsSync(f)) {
+        try {
+          console.log(`[WBTC Scraper] Serving from cache: ${f}`);
+          const data = fs.readFileSync(f, 'utf8');
+          return JSON.parse(data);
+        } catch (_) {}
+      }
     }
     throw err;
   }
 }
 
 export function getCachedWbtcRoutes() {
-  if (fs.existsSync(DATA_FILE)) {
-    try {
-      const data = fs.readFileSync(DATA_FILE, 'utf8');
-      return JSON.parse(data);
-    } catch (e) {
-      console.error('[WBTC Scraper] Failed to parse cache file:', e.message);
+  // Try writable cache first, then fall back to bundled seed data
+  for (const f of [DATA_FILE, SEED_DATA_FILE]) {
+    if (fs.existsSync(f)) {
+      try {
+        const data = fs.readFileSync(f, 'utf8');
+        return JSON.parse(data);
+      } catch (e) {
+        console.error('[WBTC Scraper] Failed to parse cache file:', e.message);
+      }
     }
   }
   return [];
