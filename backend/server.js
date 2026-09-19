@@ -14,6 +14,7 @@ import alertsRoutes from './routes/alerts.js';
 import habitsRoutes from './routes/habits.js';
 import communityRoutes from './routes/community.js';
 import adminRoutes from './routes/admin.js';
+import walletRoutes from './routes/wallet.js';
 
 // Import real-time simulation engine
 import { simulation } from './simulation.js';
@@ -72,6 +73,7 @@ app.use('/api/alerts', alertsRoutes);
 app.use('/api/habits', habitsRoutes);
 app.use('/api/community', communityRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/wallet', walletRoutes);
 
 // Admin Portal Web Interface Routes
 app.get(['/', '/admin', '/dashboard'], (req, res) => {

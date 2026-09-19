@@ -109,3 +109,60 @@ export function interpolatePositionAlongPath(path = [], t = 0) {
 
   return { lat, lng };
 }
+
+export function haversineDistKm(lat1, lon1, lat2, lon2) {
+  const R = 6371; // km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+export function calculateRouteDistanceKm(coords = []) {
+  if (!coords || coords.length < 2) return 5.0;
+  let total = 0;
+  for (let i = 0; i < coords.length - 1; i++) {
+    const p1 = coords[i];
+    const p2 = coords[i + 1];
+    if (p1?.lat && p1?.lng && p2?.lat && p2?.lng) {
+      total += haversineDistKm(p1.lat, p1.lng, p2.lat, p2.lng);
+    }
+  }
+  // Winding factor for city streets (1.25x direct distance)
+  const roadDistance = total * 1.25;
+  return Math.max(1.5, Number(roadDistance.toFixed(1)));
+}
+
+/**
+ * Calculates official Kolkata/WBTC transit fares based on distance (km).
+ */
+export function calculateFare(distanceKm, vehicleType = 'bus', isAC = false) {
+  const dist = Math.max(0.5, distanceKm || 5.0);
+
+  if (vehicleType === 'metro') {
+    if (dist <= 2) return 5;
+    if (dist <= 5) return 10;
+    if (dist <= 10) return 15;
+    if (dist <= 20) return 20;
+    return 25;
+  }
+
+  // Bus Fare
+  if (isAC) {
+    if (dist <= 6) return 25;
+    if (dist <= 12) return 35;
+    if (dist <= 20) return 50;
+    return 60;
+  }
+
+  // Non-AC Regular Bus
+  if (dist <= 4) return 10;
+  if (dist <= 10) return 15;
+  if (dist <= 16) return 20;
+  if (dist <= 24) return 25;
+  return 30;
+}
+

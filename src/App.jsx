@@ -53,8 +53,10 @@ import {
 import { api, API_BASE_URL } from "./services/api.js";
 import InteractiveMap from "./components/InteractiveMap.jsx";
 import WbtcRouteExplorer from "./components/WbtcRouteExplorer.jsx";
+import WalletModal from "./components/WalletModal.jsx";
+import BusSeatLayoutModal from "./components/BusSeatLayoutModal.jsx";
 import { useGeolocation, KOLKATA_PRESETS } from "./hooks/useGeolocation.js";
-import { buildRouteCoordinates, interpolatePositionAlongPath } from "./utils/geoUtils.js";
+import { buildRouteCoordinates, interpolatePositionAlongPath, calculateRouteDistanceKm, calculateFare } from "./utils/geoUtils.js";
 
 const DEFAULT_QUICK_DESTINATIONS = [
   {
@@ -63,7 +65,9 @@ const DEFAULT_QUICK_DESTINATIONS = [
     icon: HomeIcon,
     sub: "Salt Lake, Sector V",
     eta: "22 min",
-    route: "Route 12",
+    route: "Route 12 · 4.8 km · ₹15",
+    distanceKm: 4.8,
+    fare: 15,
   },
   {
     key: "office",
@@ -71,7 +75,9 @@ const DEFAULT_QUICK_DESTINATIONS = [
     icon: Briefcase,
     sub: "Park Street",
     eta: "18 min",
-    route: "Metro · Blue",
+    route: "Metro · Blue · 11.2 km · ₹20",
+    distanceKm: 11.2,
+    fare: 20,
   },
   {
     key: "esplanade",
@@ -79,7 +85,9 @@ const DEFAULT_QUICK_DESTINATIONS = [
     icon: Building2,
     sub: "Metro Station",
     eta: "14 min",
-    route: "Route 47",
+    route: "Route 47 · 13.8 km · ₹20",
+    distanceKm: 13.8,
+    fare: 20,
   },
 ];
 
@@ -351,6 +359,33 @@ export default function TransitMateApp() {
   const [backendOnline, setBackendOnline] = useState(false);
   const toastTimer = useRef(null);
 
+  // Commuter Wallet & Live Seat Booking State
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [walletTransactions, setWalletTransactions] = useState([]);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [walletRequiredAmount, setWalletRequiredAmount] = useState(null);
+  const [showSeatModal, setShowSeatModal] = useState(false);
+  const [selectedBusForSeat, setSelectedBusForSeat] = useState(null);
+
+  const fetchWallet = async () => {
+    try {
+      const res = await api.wallet.getBalance();
+      if (res && res.success) {
+        setWalletBalance(res.balance || 0);
+        setWalletTransactions(res.transactions || []);
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    fetchWallet();
+  }, [authed]);
+
+  const handleWalletBalanceUpdated = (newBalance) => {
+    setWalletBalance(newBalance);
+    fetchWallet();
+  };
+
   const fireToast = (message) => {
     setToast(message);
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -385,6 +420,8 @@ export default function TransitMateApp() {
     setUserName("");
     setUserEmail("");
     setIsGuest(false);
+    setWalletBalance(0);
+    setWalletTransactions([]);
   };
 
   const handleDeleteAccount = async () => {
@@ -639,22 +676,40 @@ export default function TransitMateApp() {
           </span>
         </div>
 
-        {/* Commuter Live Location Bar */}
+        {/* Commuter Live Location & Wallet Status Bar */}
         <div
-          onClick={() => setShowLocationPicker(true)}
-          className="px-5 py-2 flex items-center justify-between text-[11px] cursor-pointer tm-card-alt tm-hover transition"
+          className="px-4 py-2 flex items-center justify-between text-[11px] tm-card-alt"
           style={{ borderBottom: "1px solid var(--tm-border)" }}
-          title="Click to view or change commuter location"
         >
-          <div className="flex items-center gap-1.5 truncate">
+          <div
+            onClick={() => setShowLocationPicker(true)}
+            className="flex items-center gap-1.5 truncate cursor-pointer tm-hover px-1.5 py-0.5 rounded-lg flex-1 min-w-0 mr-2 transition"
+            title="Click to view or change commuter location"
+          >
             <MapPin size={12} style={{ color: userLocation.coords.source === "gps" ? "#38bdf8" : "var(--tm-accent)" }} />
             <span className="truncate font-medium" style={{ color: "var(--tm-heading)" }}>
-              {userLocation.coords.source === "gps" ? "My Live GPS Location" : userLocation.coords.presetName}
+              {userLocation.coords.source === "gps" ? "My Live GPS" : userLocation.coords.presetName}
             </span>
+            <span className="text-[9px] text-sky-400 font-mono shrink-0">GPS</span>
           </div>
-          <span className="text-[10px] shrink-0 font-medium hover:underline" style={{ color: "var(--tm-accent)" }}>
-            Change / GPS
-          </span>
+
+          <button
+            onClick={() => {
+              setWalletRequiredAmount(null);
+              setShowWalletModal(true);
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-medium transition cursor-pointer hover:opacity-90 shrink-0"
+            style={{
+              background: walletBalance > 0 ? "var(--tm-teal-soft)" : "rgba(201, 164, 97, 0.15)",
+              border: `1px solid ${walletBalance > 0 ? "var(--tm-teal-border)" : "var(--tm-accent-border)"}`,
+              color: walletBalance > 0 ? "var(--tm-teal)" : "var(--tm-accent)",
+            }}
+            title="Commuter Transit Wallet (Click to Top-Up or View Balance)"
+          >
+            <Wallet size={11} />
+            <span>₹{Number(walletBalance).toFixed(2)}</span>
+            <Plus size={10} className="opacity-70" />
+          </button>
         </div>
 
         {/* Location Picker & GPS Modal */}
@@ -732,6 +787,7 @@ export default function TransitMateApp() {
               setUserName(name);
               setUserEmail(email || "");
               setIsGuest(!!guest);
+              fetchWallet();
               fireToast(
                 guest
                   ? "Continuing as guest"
@@ -754,6 +810,11 @@ export default function TransitMateApp() {
                 onOpenSettings={() => setScreen("settings")}
                 onOpenAdmin={() => setScreen("admin")}
                 onOpenWbtc={() => setScreen("wbtc")}
+                onOpenWallet={() => {
+                  setWalletRequiredAmount(null);
+                  setShowWalletModal(true);
+                }}
+                walletBalance={walletBalance}
                 currentLocationName={userLocation.coords.presetName || "Live GPS"}
                 userName={userName}
               />
@@ -767,6 +828,10 @@ export default function TransitMateApp() {
                 onBack={() => setScreen("home")}
                 onPick={handlePickRoute}
                 onOpenWbtc={() => setScreen("wbtc")}
+                onOpenSeatModal={(opt) => {
+                  setSelectedBusForSeat(opt);
+                  setShowSeatModal(true);
+                }}
               />
             )}
 
@@ -805,6 +870,15 @@ export default function TransitMateApp() {
                 backendOnline={backendOnline}
                 userCoords={userLocation.coords}
                 theme={theme}
+                walletBalance={walletBalance}
+                onOpenSeatModal={() => {
+                  setSelectedBusForSeat(trackingOption);
+                  setShowSeatModal(true);
+                }}
+                onOpenWallet={(needed) => {
+                  setWalletRequiredAmount(needed);
+                  setShowWalletModal(true);
+                }}
                 onBack={() => setScreen("routes")}
                 onDone={async () => {
                   try {
@@ -938,6 +1012,37 @@ export default function TransitMateApp() {
           >
             {toast}
           </div>
+        )}
+
+        {/* Commuter Wallet Modal */}
+        {showWalletModal && (
+          <WalletModal
+            balance={walletBalance}
+            transactions={walletTransactions}
+            requiredAmount={walletRequiredAmount}
+            onClose={() => setShowWalletModal(false)}
+            onBalanceUpdated={handleWalletBalanceUpdated}
+            onToast={fireToast}
+          />
+        )}
+
+        {/* Bus Seat Layout & Booking Modal */}
+        {showSeatModal && (
+          <BusSeatLayoutModal
+            route={selectedBusForSeat || trackingOption}
+            walletBalance={walletBalance}
+            userName={userName}
+            onClose={() => setShowSeatModal(false)}
+            onOpenWalletTopUp={(needed) => {
+              setWalletRequiredAmount(needed);
+              setShowWalletModal(true);
+            }}
+            onTicketBooked={(newBal, ticket) => {
+              handleWalletBalanceUpdated(newBal);
+              fireToast(`Ticket booked! Seat: ${ticket.seatNumber}`);
+            }}
+            onToast={fireToast}
+          />
         )}
       </div>
     </div>
@@ -1698,6 +1803,8 @@ function HomeScreen({
   onOpenSettings,
   onOpenAdmin,
   onOpenWbtc,
+  onOpenWallet,
+  walletBalance = 0,
   currentLocationName,
   userName,
 }) {
@@ -1747,27 +1854,39 @@ function HomeScreen({
               {currentLocationName || "Salt Lake, Sector V"}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={onOpenWallet}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-mono font-medium tm-card-alt tm-hover transition"
+              style={{
+                border: "1px solid var(--tm-border)",
+                color: walletBalance > 0 ? "var(--tm-teal)" : "var(--tm-accent)",
+              }}
+              title="Transit Wallet (Click to Top Up)"
+            >
+              <Wallet size={13} />
+              <span>₹{Number(walletBalance).toFixed(2)}</span>
+            </button>
             <button
               onClick={onOpenAdmin}
-              className="w-9 h-9 rounded-full flex items-center justify-center tm-card-alt"
+              className="w-8 h-8 rounded-full flex items-center justify-center tm-card-alt"
               style={{ color: "var(--tm-accent)" }}
               aria-label="Open Admin Console"
               title="Transit Authority Admin"
             >
-              <Shield size={16} />
+              <Shield size={15} />
             </button>
             <button
               onClick={onOpenSettings}
-              className="w-9 h-9 rounded-full flex items-center justify-center tm-card-alt"
+              className="w-8 h-8 rounded-full flex items-center justify-center tm-card-alt"
               style={{ color: "var(--tm-muted)" }}
               aria-label="Open settings"
             >
-              <SettingsIcon size={16} />
+              <SettingsIcon size={15} />
             </button>
             <button
               onClick={onOpenHabits}
-              className="w-10 h-10 rounded-full flex items-center justify-center tm-card-alt text-sm font-semibold tm-display"
+              className="w-9 h-9 rounded-full flex items-center justify-center tm-card-alt text-xs font-semibold tm-display"
               style={{ color: "var(--tm-heading)", boxShadow: "0 0 0 1px var(--tm-accent-border), 0 0 10px 0px rgba(201,164,97,0.2)" }}
               aria-label="Open your commute habits"
             >
@@ -2084,6 +2203,9 @@ function TrackingScreen({
   unitPref,
   userCoords,
   theme,
+  walletBalance = 0,
+  onOpenSeatModal,
+  onOpenWallet,
   onBack,
   onDone,
 }) {
@@ -2229,6 +2351,35 @@ function TrackingScreen({
               userCoords={userCoords}
               theme={theme}
             />
+
+            {option.vehicleType === "bus" && onOpenSeatModal && (
+              <button
+                onClick={onOpenSeatModal}
+                className="tm-card tm-hover rounded-2xl p-4 flex items-center gap-3 text-left border transition"
+                style={{ borderColor: "var(--tm-accent-border)", background: "rgba(201, 164, 97, 0.08)" }}
+              >
+                <div
+                  className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: "var(--tm-accent-soft)" }}
+                >
+                  <Armchair size={16} style={{ color: "var(--tm-accent)" }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold" style={{ color: "var(--tm-heading)" }}>
+                      Live Bus Seat Map & Booking
+                    </p>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-medium bg-emerald-500/20 text-emerald-400">
+                      Live 32 Seats
+                    </span>
+                  </div>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--tm-muted)" }}>
+                    View available seats, distance fare & book ticket with wallet
+                  </p>
+                </div>
+                <ChevronRight size={16} style={{ color: "var(--tm-muted)" }} className="shrink-0" />
+              </button>
+            )}
 
             <button
               onClick={() => setCrowdMapOpen(true)}
@@ -3141,7 +3292,7 @@ function CommunityScreen({ userName, onSelectRoute }) {
   );
 }
 
-function RoutesScreen({ title, options, routePriority, onBack, onPick }) {
+function RoutesScreen({ title, options, routePriority, onBack, onPick, onOpenSeatModal }) {
   const sortedOptions = [...options].sort((a, b) => {
     if (a.key === routePriority) return -1;
     if (b.key === routePriority) return 1;
@@ -3172,6 +3323,14 @@ function RoutesScreen({ title, options, routePriority, onBack, onPick }) {
           const Icon = option.icon || Zap;
           const crowd = CROWD_STYLE[option.crowd] || CROWD_STYLE.Medium;
           const isDefault = option.key === routePriority;
+
+          // Distance and official fare calculation
+          const calculatedDist = option.pathCoordinates && option.pathCoordinates.length > 1
+            ? calculateRouteDistanceKm(option.pathCoordinates)
+            : Math.max(3.2, Number(((option.stops?.length || 4) * 2.2).toFixed(1)));
+          const isAC = Boolean(option.tag?.toLowerCase().includes("ac") || option.mode?.toLowerCase().includes("ac"));
+          const calculatedFareVal = calculateFare(calculatedDist, option.vehicleType || "bus", isAC);
+
           return (
             <button
               key={option.key}
@@ -3218,25 +3377,46 @@ function RoutesScreen({ title, options, routePriority, onBack, onPick }) {
                 {option.detail}
               </p>
 
-              <div className="flex items-center gap-4 pt-3" style={{ borderTop: "1px solid var(--tm-border)" }}>
-                <div className="flex items-center gap-1.5">
-                  <Clock size={13} style={{ color: "var(--tm-muted)" }} />
+              <div className="flex items-center gap-2.5 pt-3" style={{ borderTop: "1px solid var(--tm-border)" }}>
+                <div className="flex items-center gap-1" title="Estimated Travel Time">
+                  <Clock size={12} style={{ color: "var(--tm-muted)" }} />
                   <span className="text-xs tm-mono" style={{ color: "var(--tm-heading)" }}>
                     {option.time}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <IndianRupee size={13} style={{ color: "var(--tm-muted)" }} />
+                <div className="flex items-center gap-1" title="Trip Distance">
+                  <Navigation size={11} style={{ color: "var(--tm-muted)" }} />
                   <span className="text-xs tm-mono" style={{ color: "var(--tm-heading)" }}>
-                    {option.fare.replace("₹", "")}
+                    {calculatedDist} km
+                  </span>
+                </div>
+                <div className="flex items-center gap-1" title="Kolkata Transit Fare">
+                  <IndianRupee size={12} style={{ color: "var(--tm-accent)" }} />
+                  <span className="text-xs tm-mono font-bold" style={{ color: "var(--tm-accent)" }}>
+                    {calculatedFareVal}
                   </span>
                 </div>
                 <span
-                  className="text-[10px] px-2 py-0.5 rounded-md ml-auto"
+                  className="text-[10px] px-1.5 py-0.5 rounded-md ml-auto"
                   style={{ color: crowd.color, background: crowd.bg }}
                 >
-                  {option.crowd} crowd
+                  {option.crowd}
                 </span>
+
+                {option.vehicleType === "bus" && onOpenSeatModal && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenSeatModal(option);
+                    }}
+                    className="text-[10px] px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 flex items-center gap-1 transition"
+                    title="View 2x2 seat map & live seat price"
+                  >
+                    <Armchair size={11} />
+                    <span>Seats</span>
+                  </button>
+                )}
               </div>
             </button>
           );

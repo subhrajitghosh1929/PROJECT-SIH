@@ -279,6 +279,27 @@ class ApiService {
       return this.request('/admin/reset', { method: 'POST' }, true);
     },
   };
+
+  // --- Commuter Wallet & Ticketing ---
+  wallet = {
+    getBalance: async () => {
+      return this.request('/wallet/balance');
+    },
+
+    topUp: async (amount, method = 'UPI') => {
+      return this.request('/wallet/topup', {
+        method: 'POST',
+        body: JSON.stringify({ amount, method }),
+      });
+    },
+
+    payTicket: async ({ amount, routeLabel, seatNumber, distanceKm }) => {
+      return this.request('/wallet/pay-ticket', {
+        method: 'POST',
+        body: JSON.stringify({ amount, routeLabel, seatNumber, distanceKm }),
+      });
+    },
+  };
 }
 
 export const api = new ApiService();

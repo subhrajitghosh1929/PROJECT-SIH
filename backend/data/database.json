@@ -16,7 +16,9 @@
           "Metro"
         ]
       },
-      "createdAt": "2026-09-01T15:00:00.000Z"
+      "walletBalance": 0,
+      "walletTransactions": [],
+      "createdAt": "2026-09-19T14:23:08.495Z"
     },
     {
       "id": "admin-sih-02",
@@ -34,7 +36,9 @@
           "Metro"
         ]
       },
-      "createdAt": "2026-09-01T15:00:00.000Z"
+      "walletBalance": 0,
+      "walletTransactions": [],
+      "createdAt": "2026-09-19T14:23:08.496Z"
     },
     {
       "id": "u1",
@@ -52,41 +56,9 @@
           "Metro"
         ]
       },
-      "createdAt": "2026-09-01T15:10:58.705Z"
-    },
-    {
-      "id": "u-1788275460223-jj4u4",
-      "name": "Demo User",
-      "email": "demo@sih.in",
-      "passwordHash": "$2a$10$wE2LKIKLcyVw5em6lutMkOIspG7mAbOZKdciiMNx58VtmSxL1isxC",
-      "preferences": {
-        "theme": "dark",
-        "notificationsOn": true,
-        "routePriority": "fastest",
-        "unitPref": "metric",
-        "preferredModes": [
-          "Bus",
-          "Metro"
-        ]
-      },
-      "createdAt": "2026-09-01T15:11:00.223Z"
-    },
-    {
-      "id": "u-1788275790555-9k254",
-      "name": "Subhrajit Ghosh",
-      "email": "subhrajitghosh1929@gmail.com",
-      "passwordHash": "$2a$10$ymsXK7Q065pYiYLdRhguy.1.F2w8.rOvn2ZPN9/ygTxRsoNr6BUuO",
-      "preferences": {
-        "theme": "dark",
-        "notificationsOn": true,
-        "routePriority": "fastest",
-        "unitPref": "metric",
-        "preferredModes": [
-          "Bus",
-          "Metro"
-        ]
-      },
-      "createdAt": "2026-09-01T15:16:30.555Z"
+      "walletBalance": 0,
+      "walletTransactions": [],
+      "createdAt": "2026-09-19T14:23:08.496Z"
     }
   ],
   "quickDestinations": [
@@ -397,7 +369,7 @@
       "routeLabel": "Route 12",
       "tripKey": "home",
       "active": true,
-      "timestamp": 1788275398706
+      "timestamp": 1789827728496
     },
     {
       "id": "a2",
@@ -409,7 +381,7 @@
       "routeLabel": "Route 12",
       "tripKey": "home",
       "active": true,
-      "timestamp": 1788275338706
+      "timestamp": 1789827668496
     },
     {
       "id": "a3",
@@ -421,7 +393,7 @@
       "routeLabel": "Metro · Blue",
       "tripKey": "office",
       "active": true,
-      "timestamp": 1788274738706
+      "timestamp": 1789827068496
     },
     {
       "id": "a4",
@@ -433,7 +405,7 @@
       "routeLabel": "Route 47",
       "tripKey": "esplanade",
       "active": true,
-      "timestamp": 1788274258706
+      "timestamp": 1789826588496
     },
     {
       "id": "a5",
@@ -445,22 +417,10 @@
       "routeLabel": "Metro · Blue",
       "tripKey": "office",
       "active": true,
-      "timestamp": 1788273358706
+      "timestamp": 1789825688496
     }
   ],
   "communityPosts": [
-    {
-      "id": "c-1788275460239-tp3d",
-      "userId": "guest",
-      "userName": "SIH Evaluator",
-      "type": "delay",
-      "tripKey": null,
-      "routeLabel": "Route 12",
-      "message": "Bus moving smoothly post Karunamoyee junction.",
-      "time": "Just now",
-      "confirms": 2,
-      "timestamp": 1788275460239
-    },
     {
       "id": "c1",
       "userId": "u2",
@@ -471,7 +431,7 @@
       "message": "Platform 2 closed for maintenance at Sector V — board from Platform 1 instead.",
       "time": "35 min ago",
       "confirms": 14,
-      "timestamp": 1788273358706
+      "timestamp": 1789825688496
     },
     {
       "id": "c2",
@@ -483,7 +443,7 @@
       "message": "Packed beyond normal today — standing room only near Karunamoyee.",
       "time": "10 min ago",
       "confirms": 6,
-      "timestamp": 1788274858706
+      "timestamp": 1789827188496
     },
     {
       "id": "c3",
@@ -495,7 +455,7 @@
       "message": "Stuck in traffic near the Karunamoyee crossing, moving very slowly.",
       "time": "18 min ago",
       "confirms": 9,
-      "timestamp": 1788274378706
+      "timestamp": 1789826708496
     },
     {
       "id": "c4",
@@ -507,7 +467,7 @@
       "message": "Road closure near Ultadanga for a procession — buses being diverted.",
       "time": "1 hr ago",
       "confirms": 22,
-      "timestamp": 1788271858706
+      "timestamp": 1789824188496
     },
     {
       "id": "c5",
@@ -519,7 +479,7 @@
       "message": "Reminder: keep the space near the doors clear so people can get off quickly.",
       "time": "2 hr ago",
       "confirms": 31,
-      "timestamp": 1788268258706
+      "timestamp": 1789820588496
     }
   ],
   "weeklyMinutes": [

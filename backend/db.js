@@ -28,6 +28,8 @@ const INITIAL_DATA = {
         unitPref: "metric",
         preferredModes: ["Bus", "Metro"],
       },
+      walletBalance: 0,
+      walletTransactions: [],
       createdAt: new Date().toISOString(),
     },
     {
@@ -43,6 +45,8 @@ const INITIAL_DATA = {
         unitPref: "metric",
         preferredModes: ["Bus", "Metro"],
       },
+      walletBalance: 0,
+      walletTransactions: [],
       createdAt: new Date().toISOString(),
     },
     {
@@ -58,6 +62,8 @@ const INITIAL_DATA = {
         unitPref: "metric",
         preferredModes: ["Bus", "Metro"],
       },
+      walletBalance: 0,
+      walletTransactions: [],
       createdAt: new Date().toISOString(),
     },
   ],
@@ -452,6 +458,8 @@ class Database {
         unitPref: "metric",
         preferredModes: ["Bus", "Metro"],
       },
+      walletBalance: 0,
+      walletTransactions: [],
       createdAt: new Date().toISOString(),
     };
     this.data.users.push(newUser);
@@ -475,6 +483,94 @@ class Database {
       return true;
     }
     return false;
+  }
+
+  // --- Wallet Operations (Starts at 0) ---
+  getWallet(userId) {
+    const user = this.findUserById(userId);
+    if (!user) return { balance: 0, transactions: [] };
+    if (user.walletBalance === undefined) user.walletBalance = 0;
+    if (!user.walletTransactions) user.walletTransactions = [];
+    return {
+      balance: user.walletBalance,
+      transactions: user.walletTransactions,
+    };
+  }
+
+  topUpWallet(userId, amount, method = "UPI") {
+    let user = this.findUserById(userId);
+    if (!user) {
+      // If guest or unauthenticated in demo, fallback to first user u1
+      user = this.data.users[0];
+    }
+    if (!user) throw new Error("User not found");
+    if (user.walletBalance === undefined) user.walletBalance = 0;
+    if (!user.walletTransactions) user.walletTransactions = [];
+
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) throw new Error("Invalid top up amount");
+
+    user.walletBalance = Number((user.walletBalance + numAmount).toFixed(2));
+    const transaction = {
+      id: `txn-${Date.now()}`,
+      type: "topup",
+      amount: numAmount,
+      method,
+      description: `Wallet top-up via ${method}`,
+      timestamp: new Date().toISOString(),
+      balanceAfter: user.walletBalance,
+    };
+    user.walletTransactions.unshift(transaction);
+    this.save();
+    return { balance: user.walletBalance, transaction };
+  }
+
+  deductWallet(userId, amount, details = {}) {
+    let user = this.findUserById(userId);
+    if (!user) {
+      user = this.data.users[0];
+    }
+    if (!user) throw new Error("User not found");
+    if (user.walletBalance === undefined) user.walletBalance = 0;
+    if (!user.walletTransactions) user.walletTransactions = [];
+
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) throw new Error("Invalid fare amount");
+
+    if (user.walletBalance < numAmount) {
+      const err = new Error(`Insufficient wallet balance. You have ₹${user.walletBalance}, but fare is ₹${numAmount}`);
+      err.code = "INSUFFICIENT_FUNDS";
+      err.currentBalance = user.walletBalance;
+      err.requiredAmount = numAmount;
+      throw err;
+    }
+
+    user.walletBalance = Number((user.walletBalance - numAmount).toFixed(2));
+    const ticketId = `TM-TKT-${Date.now().toString().slice(-6)}`;
+    const transaction = {
+      id: `txn-${Date.now()}`,
+      type: "fare_payment",
+      amount: numAmount,
+      description: details.routeLabel ? `Ticket: ${details.routeLabel} (Seat ${details.seatNumber || "General"})` : "Transit Fare",
+      ticketId,
+      timestamp: new Date().toISOString(),
+      balanceAfter: user.walletBalance,
+    };
+    user.walletTransactions.unshift(transaction);
+    this.save();
+
+    const ticket = {
+      ticketId,
+      routeLabel: details.routeLabel || "WBTC City Transit",
+      seatNumber: details.seatNumber || "General",
+      fare: numAmount,
+      distanceKm: details.distanceKm || 5.0,
+      timestamp: new Date().toISOString(),
+      qrPayload: `VALID:TM:${ticketId}:${user.id}:${numAmount}:${Date.now()}`,
+      status: "ACTIVE",
+    };
+
+    return { balance: user.walletBalance, transaction, ticket };
   }
 
   // --- Routes ---
